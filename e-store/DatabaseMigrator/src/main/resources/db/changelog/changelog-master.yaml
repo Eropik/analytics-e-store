@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1-base-schema
+      author: egor2
+      changes:
+        - sqlFile:
+            # Относительный путь к файлу v1_schema_base.sql
+            path: sql/v1_schema_base.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: true
+
+  - changeSet:
+      id: 2-functions-triggers
+      author: egor2
+      changes:
+        - sqlFile:
+            # Относительный путь к файлу v1_functions_triggers.sql
+            path: sql/v1_functions_triggers.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: true
+            endDelimiter: "//"

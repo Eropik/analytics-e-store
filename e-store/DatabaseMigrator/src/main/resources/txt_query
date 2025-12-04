@@ -1,0 +1,57 @@
+admin inf:
+------------------------------------------------------------------
+	SELECT * FROM "user"
+   JOIN role r ON "user".role_id = r.role_id
+   join admin_profile ap on ap.user_id = "user".user_id
+   join admin_department ad on ad.department_id = ap.department_id
+-------------------------------------------------------------------
+
+create admin:
+
+-- Данные для пользователя
+DO $$
+    DECLARE
+        admin_email      VARCHAR(100) := 'admin.john.doe@eshop.com';
+        admin_password   TEXT         := '1'; -- **ОБЯЗАТЕЛЬНО используйте хешированный пароль!**
+        admin_role_name  VARCHAR(50)  := 'ROLE_ADMIN';
+        admin_role_id    INT;
+        new_admin_user_id UUID;
+
+        -- Данные для профиля администратора
+        admin_first_name     VARCHAR(50) := 'John';
+        admin_last_name      VARCHAR(50) := 'Doe';
+        admin_department_name VARCHAR(50) := 'PRODUCT_MANAGE';
+        admin_department_id  INT;
+    BEGIN
+
+        -- 2. Получаем ID роли администратора
+        SELECT role_id INTO admin_role_id
+        FROM role
+        WHERE role_name = admin_role_name;
+
+        IF admin_role_id IS NULL THEN
+            RAISE EXCEPTION 'Role % not found.', admin_role_name;
+        END IF;
+
+        -- 3. Получаем ID отдела
+        SELECT department_id INTO admin_department_id
+        FROM admin_department
+        WHERE department_name = admin_department_name;
+
+        IF admin_department_id IS NULL THEN
+            RAISE EXCEPTION 'Department % not found.', admin_department_name;
+        END IF;
+
+        -- 4. Создаем запись в таблице "user"
+        INSERT INTO "user" (email, password_hash, role_id)
+        VALUES (admin_email, admin_password, admin_role_id)
+        RETURNING user_id INTO new_admin_user_id;
+
+        -- 5. Создаем запись в таблице admin_profile
+        INSERT INTO admin_profile (user_id, first_name, last_name, department_id, hire_date)
+        VALUES (new_admin_user_id, admin_first_name, admin_last_name, admin_department_id, CURRENT_DATE);
+
+        RAISE NOTICE 'Admin user created successfully with ID: %', new_admin_user_id;
+    END $$;
+
+

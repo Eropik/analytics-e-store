@@ -1,0 +1,47 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- НАСЛЕДОВАНИЕ: Унаследуем все от Spring Boot Parent -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.4</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.estore</groupId>
+    <artifactId>e-store</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>e-store Root Project</name>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <modules>
+        <module>Library</module>
+        <module>Admin</module>
+        <module>Customer</module>
+        <module>DatabaseMigrator</module>
+    </modules>
+    <dependencyManagement>
+        <dependencies>
+
+
+
+
+
+            <!-- Фиксируем версию Hibernate Validator, чтобы избежать конфликтов -->
+            <dependency>
+                <groupId>org.hibernate.validator</groupId>
+                <artifactId>hibernate-validator</artifactId>
+                <version>7.0.0.Final</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+</project>
