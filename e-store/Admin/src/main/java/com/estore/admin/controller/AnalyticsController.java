@@ -1,5 +1,6 @@
 package com.estore.admin.controller;
 
+import com.estore.library.dto.analyze.dto.*;
 import com.estore.library.model.dicts.OrderStatus;
 import com.estore.library.repository.dicts.OrderStatusRepository;
 import com.estore.library.service.*;
@@ -32,7 +33,8 @@ public class AnalyticsController {
     private final ProductService productService;
     private final CustomerProfileService customerProfileService;
     private final OrderItemService orderItemService;
-    private final OrderStatusRepository orderStatusRepository; // Добавляем репозиторий для статусов
+    private final OrderStatusRepository orderStatusRepository;
+    private final AnalyzeService analyzeService;
 
     /**
      * Проверка доступа к аналитике
@@ -238,6 +240,134 @@ public class AnalyticsController {
 
 
             return ResponseEntity.ok(dashboard);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Топ товаров по объему продаж
+     * GET /api/admin/analytics/best-sellers
+     */
+    @GetMapping("/best-sellers")
+    public ResponseEntity<?> getBestSellers(
+            @RequestParam UUID adminUserId,
+            @RequestParam(defaultValue = "10") int limit) {
+        try {
+            if (!checkAccess(adminUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. ANALYZE department required"));
+            }
+
+            List<BestSellerDto> bestSellers = analyzeService.getBestSellers(limit);
+            return ResponseEntity.ok(Map.of("bestSellers", bestSellers));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Анализ по категориям и брендам
+     * GET /api/admin/analytics/category-brand
+     */
+    @GetMapping("/category-brand")
+    public ResponseEntity<?> getCategoryBrandAnalysis(@RequestParam UUID adminUserId) {
+        try {
+            if (!checkAccess(adminUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. ANALYZE department required"));
+            }
+
+            List<CategoryBrandAnalysisDto> analysis = analyzeService.getCategoryBrandAnalysis();
+            return ResponseEntity.ok(Map.of("categoryBrandAnalysis", analysis));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Анализ по возрастным группам покупателей
+     * GET /api/admin/analytics/age-groups
+     */
+    @GetMapping("/age-groups")
+    public ResponseEntity<?> getAgeGroupAnalysis(@RequestParam UUID adminUserId) {
+        try {
+            if (!checkAccess(adminUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. ANALYZE department required"));
+            }
+
+            List<AgeGroupAnalysisDto> analysis = analyzeService.getAgeGroupAnalysis();
+            return ResponseEntity.ok(Map.of("ageGroupAnalysis", analysis));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Анализ по маршрутам доставки
+     * GET /api/admin/analytics/routes
+     */
+    @GetMapping("/routes")
+    public ResponseEntity<?> getRouteAnalysis(@RequestParam UUID adminUserId) {
+        try {
+            if (!checkAccess(adminUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. ANALYZE department required"));
+            }
+
+            List<RouteAnalysisDto> analysis = analyzeService.getRouteAnalysis();
+            return ResponseEntity.ok(Map.of("routeAnalysis", analysis));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Анализ по способам оплаты
+     * GET /api/admin/analytics/payment-methods
+     */
+    @GetMapping("/payment-methods")
+    public ResponseEntity<?> getPaymentMethodAnalysis(@RequestParam UUID adminUserId) {
+        try {
+            if (!checkAccess(adminUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. ANALYZE department required"));
+            }
+
+            List<PaymentDeliveryAnalysisDto> analysis = analyzeService.getPaymentMethodAnalysis();
+            return ResponseEntity.ok(Map.of("paymentMethodAnalysis", analysis));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Анализ по способам доставки
+     * GET /api/admin/analytics/delivery-methods
+     */
+    @GetMapping("/delivery-methods")
+    public ResponseEntity<?> getDeliveryMethodAnalysis(@RequestParam UUID adminUserId) {
+        try {
+            if (!checkAccess(adminUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. ANALYZE department required"));
+            }
+
+            List<PaymentDeliveryAnalysisDto> analysis = analyzeService.getDeliveryMethodAnalysis();
+            return ResponseEntity.ok(Map.of("deliveryMethodAnalysis", analysis));
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

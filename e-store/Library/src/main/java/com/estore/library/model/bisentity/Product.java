@@ -47,8 +47,6 @@ public class Product {
     @Column(name = "average_rating", precision = 2, scale = 1)
     private BigDecimal averageRating;
 
-    // НОВОЕ ПОЛЕ
-    //чтотот там считается как sum(оценки_все)/count(кол-во*)
     @Column(name = "ratings_count")
     private Integer ratingsCount;
 

@@ -1,5 +1,7 @@
 package com.estore.admin.controller;
 
+import com.estore.library.dto.product.dto.BrandDto;
+import com.estore.library.dto.product.dto.CategoryDto;
 import com.estore.library.dto.product.request.ProductCreateRequest;
 import com.estore.library.dto.product.response.ProductImageResponseDto;
 import com.estore.library.dto.product.response.ProductResponseDto;
@@ -146,21 +148,19 @@ public class ProductManagementController {
         dto.setMainImageUrl(product.getMainImageUrl());
 
         if (product.getCategory() != null) {
-            dto.setCategoryId(product.getCategory().getCategoryId());
-            dto.setCategoryName(product.getCategory().getCategoryName());
+            CategoryDto category = new CategoryDto(product.getCategory().getCategoryId(),product.getCategory().getCategoryName());
+            dto.setCategory(category);
+
         }
 
         if (product.getBrand() != null) {
-            dto.setBrandId(product.getBrand().getBrandId());
-            dto.setBrandName(product.getBrand().getBrandName());
-        }
-
-
-        if (product.getCategory() != null) {
-
-            dto.setCategoryId(product.getCategory().getCategoryId());
+            BrandDto brand = new BrandDto(product.getBrand().getBrandId(),product.getBrand().getBrandName());
+            dto.setBrand(brand);
 
         }
+
+
+
 
         /*if (product.getImages() != null) {
             List<ProductImageResponseDto> imageDtos = product.getImages().stream()
