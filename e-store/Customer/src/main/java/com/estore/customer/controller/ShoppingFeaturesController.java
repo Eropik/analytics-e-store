@@ -21,7 +21,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/customer/shopping")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:8020", "null"})
 public class ShoppingFeaturesController {
     
     private final ProductService productService;

@@ -21,7 +21,7 @@ public class User {
     private String email;
 
     @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+    private String   passwordHash;
 
     @Column(name = "registration_date")
     private LocalDateTime registrationDate;

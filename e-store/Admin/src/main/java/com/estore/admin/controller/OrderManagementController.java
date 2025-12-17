@@ -28,7 +28,7 @@ import java.util.UUID;
 @RequestMapping("/api/admin/orders")
 @RequiredArgsConstructor
 //@CrossOrigin(origins = "*")
-@CrossOrigin(origins = {"http://localhost:8019", "null"})
+@CrossOrigin(origins = {"http://localhost:3001", "null"})
 public class OrderManagementController {
 
     private final AdminProfileService adminProfileService;

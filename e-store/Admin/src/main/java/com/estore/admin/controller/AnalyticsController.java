@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 //@CrossOrigin(origins = "*")
 
-@CrossOrigin(origins = {"http://localhost:8019", "null"})
+@CrossOrigin(origins = {"http://localhost:3001", "null"})
 public class AnalyticsController {
 
     private final AdminProfileService adminProfileService;
@@ -368,6 +368,30 @@ public class AnalyticsController {
 
             List<PaymentDeliveryAnalysisDto> analysis = analyzeService.getDeliveryMethodAnalysis();
             return ResponseEntity.ok(Map.of("deliveryMethodAnalysis", analysis));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Прогноз продаж по категории (скользящее среднее)
+     * GET /api/admin/analytics/sales/forecast
+     */
+    @GetMapping("/sales/forecast")
+    public ResponseEntity<?> getSalesForecast(
+            @RequestParam UUID adminUserId,
+            @RequestParam Integer categoryId,
+            @RequestParam(defaultValue = "3") int windowSize) {
+        try {
+            if (!checkAccess(adminUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. ANALYZE department required"));
+            }
+
+            ForecastDto forecast = analyzeService.getMonthlySalesForecast(categoryId, windowSize);
+            return ResponseEntity.ok(Map.of("forecast", forecast));
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

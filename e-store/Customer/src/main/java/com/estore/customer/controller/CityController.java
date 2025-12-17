@@ -11,7 +11,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/customer/cities")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:8020", "null"})
 public class CityController {
     
     private final CityService cityService;

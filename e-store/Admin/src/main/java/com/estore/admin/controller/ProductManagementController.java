@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/admin/products")
 @RequiredArgsConstructor
         //@CrossOrigin(origins = "*")
-@CrossOrigin(origins = {"http://localhost:8019", "null"})
+@CrossOrigin(origins = {"http://localhost:3001", "null"})
 public class ProductManagementController {
     
     private final AdminProfileService adminProfileService;
@@ -162,14 +162,13 @@ public class ProductManagementController {
 
 
 
-        /*if (product.getImages() != null) {
+        if (product.getImages() != null) {
             List<ProductImageResponseDto> imageDtos = product.getImages().stream()
                     .map(image -> {
                         ProductImageResponseDto imageDto = new ProductImageResponseDto();
                         imageDto.setImageId(image.getImageId()); // Важно для операций DELETE
                         imageDto.setImageUrl(image.getImageUrl());
                         imageDto.setSortOrder(image.getSortOrder());
-                        // ВАЖНО: Мы НЕ устанавливаем imageDto.setProduct(...)
                         return imageDto;
                     })
                     .collect(Collectors.toList());
@@ -177,7 +176,6 @@ public class ProductManagementController {
         } else {
             dto.setImages(List.of());
         }
-        dto.setImages(List.of());*/
 
         return dto;
     }

@@ -43,6 +43,12 @@ public class AnalyzeServiceImpl implements AnalyzeService {
     public List<PaymentDeliveryAnalysisDto> getDeliveryMethodAnalysis() {
         return analyzeRepository.getDeliveryMethodAnalysis();
     }
+
+    @Override
+    public ForecastDto getMonthlySalesForecast(Integer categoryId, int windowSize) {
+        return analyzeRepository.getMonthlySalesForecast(categoryId, windowSize);
+    }
 }
+
 
 

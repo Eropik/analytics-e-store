@@ -29,8 +29,8 @@ public class AdminUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
         // Проверяем, что пользователь имеет административные права
-        String roleName = user.getRole().getRoleName();
-        if (!isAdminRole(roleName)) {
+        String normalizedRole = normalizeRole(user.getRole().getRoleName());
+        if (!isAdminRole(normalizedRole)) {
             throw new UsernameNotFoundException("User does not have admin privileges: " + email);
         }
 
@@ -41,11 +41,20 @@ public class AdminUserDetailsService implements UserDetailsService {
      * Проверка, является ли роль административной
      */
     private boolean isAdminRole(String roleName) {
-        return roleName.equals("Admin") ||
-               roleName.equals("Super Admin") ||
-               roleName.equals("Warehouse Manager") ||
-               roleName.equals("Sales Manager") ||
-               roleName.equals("Logistics Manager");
+        String normalized = normalizeRole(roleName);
+        return normalized.equals("ADMIN") ||
+               normalized.equals("SUPER_ADMIN") ||
+               normalized.equals("WAREHOUSE_MANAGER") ||
+               normalized.equals("SALES_MANAGER") ||
+               normalized.equals("LOGISTICS_MANAGER");
+    }
+
+    private static String normalizeRole(String roleName) {
+        String normalized = roleName.toUpperCase().replace(" ", "_");
+        if (normalized.startsWith("ROLE_")) {
+            normalized = normalized.substring(5);
+        }
+        return normalized;
     }
 
     /**
@@ -64,11 +73,11 @@ public class AdminUserDetailsService implements UserDetailsService {
             List<GrantedAuthority> authorities = new ArrayList<>();
             
             // Добавляем роль с префиксом ROLE_
-            String roleName = user.getRole().getRoleName().toUpperCase().replace(" ", "_");
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + roleName));
+            String normalizedRole = normalizeRole(user.getRole().getRoleName());
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + normalizedRole));
             
             // Можно добавить дополнительные права на основе роли
-            switch (roleName) {
+            switch (normalizedRole) {
                 case "SUPER_ADMIN":
                     authorities.add(new SimpleGrantedAuthority("PERMISSION_ALL"));
                     authorities.add(new SimpleGrantedAuthority("PERMISSION_DELETE_USERS"));

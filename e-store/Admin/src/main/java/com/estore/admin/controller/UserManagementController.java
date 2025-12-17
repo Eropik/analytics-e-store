@@ -31,7 +31,7 @@ import java.util.*;
 @RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
 //@CrossOrigin(origins = "*")
-@CrossOrigin(origins = {"http://localhost:8019", "null"})
+@CrossOrigin(origins = {"http://localhost:3001", "null"})
 public class UserManagementController {
     
     private final AdminProfileService adminProfileService;

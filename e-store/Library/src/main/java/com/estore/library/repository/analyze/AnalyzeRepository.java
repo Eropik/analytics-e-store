@@ -229,5 +229,62 @@ public class AnalyzeRepository {
         
         return analysis;
     }
+
+
+    /**
+     * Прогнозирование продаж по месяцам по категории товаров
+     */
+    public ForecastDto getMonthlySalesForecast(Integer categoryId, int windowSize) {
+
+        String sql = """
+        SELECT 
+            DATE_TRUNC('month', o.order_date) AS month,
+            SUM(oi.quantity * oi.unit_price) AS revenue
+        FROM order_item oi
+        JOIN "order" o ON oi.order_id = o.order_id
+        JOIN product p ON oi.product_id = p.product_id
+        JOIN order_status os ON o.status_id = os.status_id
+        WHERE os.status_name = 'DELIVERED'
+          AND p.category_id = :categoryId
+        GROUP BY month
+        ORDER BY month
+        """;
+
+        jakarta.persistence.Query query = entityManager.createNativeQuery(sql);
+        query.setParameter("categoryId", categoryId);
+
+        List<Object[]> rows = query.getResultList();
+
+        List<BigDecimal> monthlySales = new ArrayList<>();
+        for (Object[] row : rows) {
+            monthlySales.add((BigDecimal) row[1]);
+        }
+
+        // Расчет скользящего среднего
+        List<BigDecimal> movingAvg = new ArrayList<>();
+
+        for (int i = 0; i < monthlySales.size(); i++) {
+            if (i + 1 < windowSize) {
+                movingAvg.add(null); // для первых месяцев нет MA
+            } else {
+                BigDecimal sum = BigDecimal.ZERO;
+                for (int j = i - windowSize + 1; j <= i; j++) {
+                    sum = sum.add(monthlySales.get(j));
+                }
+                movingAvg.add(sum.divide(BigDecimal.valueOf(windowSize), 2, BigDecimal.ROUND_HALF_UP));
+            }
+        }
+
+        // Прогноз = последнее скользящее среднее
+        BigDecimal forecast = movingAvg.get(movingAvg.size() - 1);
+
+        ForecastDto dto = new ForecastDto();
+        dto.setMonthlySales(monthlySales);
+        dto.setMovingAverage(movingAvg);
+        dto.setForecast(forecast);
+
+        return dto;
+    }
+
 }
 

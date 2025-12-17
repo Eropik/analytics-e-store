@@ -34,6 +34,12 @@ public interface AnalyzeService {
      * Получить анализ по способам доставки
      */
     List<PaymentDeliveryAnalysisDto> getDeliveryMethodAnalysis();
+
+    /**
+     * Прогноз продаж по месяцам по категории
+     */
+    ForecastDto getMonthlySalesForecast(Integer categoryId, int windowSize);
 }
+
 
 

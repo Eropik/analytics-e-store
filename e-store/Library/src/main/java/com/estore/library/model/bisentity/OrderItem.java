@@ -25,6 +25,4 @@ public class OrderItem {
     @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
 
-    // ИСПОЛНЕНО: Поле subtotal удалено.
-    // Его можно вычислить: quantity * unit_price
 }

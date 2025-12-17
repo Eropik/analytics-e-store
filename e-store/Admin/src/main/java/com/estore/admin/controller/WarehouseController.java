@@ -18,7 +18,7 @@ import java.util.*;
 @RequestMapping("/api/admin/warehouses")
 @RequiredArgsConstructor
 //@CrossOrigin(origins = "*")
-@CrossOrigin(origins = {"http://localhost:8019", "null"})
+@CrossOrigin(origins = {"http://localhost:3001", "null"})
 public class WarehouseController {
     
     private final AdminProfileService adminProfileService;

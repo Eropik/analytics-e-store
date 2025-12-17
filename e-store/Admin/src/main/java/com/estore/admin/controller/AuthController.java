@@ -7,7 +7,6 @@ import com.estore.library.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -16,12 +15,11 @@ import java.util.*;
 @RequestMapping("/api/admin/auth")
 @RequiredArgsConstructor
 //@CrossOrigin(origins = "*")
-@CrossOrigin(origins = {"http://localhost:8019", "null"})
+@CrossOrigin(origins = {"http://localhost:3001", "null"})
 public class AuthController {
     
     private final UserService userService;
     private final AdminProfileService adminProfileService;
-    private final PasswordEncoder passwordEncoder;
     
     /**
      * Авторизация администратора
@@ -39,14 +37,18 @@ public class AuthController {
             
             User user = userOpt.get();
             
-            // Проверка пароля
-            if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            // Проверка пароля (храним в БД как есть, без encoder)
+            if (!Objects.equals(request.getPassword(), user.getPasswordHash())) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "Invalid credentials"));
             }
+
+
             
             // Проверка роли Admin
-            if (!"Admin".equals(user.getRole().getRoleName())) {
+            String roleName = user.getRole().getRoleName();
+            String normalizedRole = roleName.toUpperCase().replaceFirst("^ROLE_", "");
+            if (!"ADMIN".equals(normalizedRole)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Access denied. Admin role required"));
             }

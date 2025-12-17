@@ -29,8 +29,8 @@ public class CustomerUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
         // Проверяем, что пользователь является клиентом
-        String roleName = user.getRole().getRoleName();
-        if (!roleName.equals("Customer")) {
+        String normalizedRole = normalizeRole(user.getRole().getRoleName());
+        if (!normalizedRole.equals("CUSTOMER")) {
             throw new UsernameNotFoundException("User is not a customer: " + email);
         }
 
@@ -53,8 +53,8 @@ public class CustomerUserDetailsService implements UserDetailsService {
             List<GrantedAuthority> authorities = new ArrayList<>();
             
             // Добавляем роль с префиксом ROLE_
-            String roleName = user.getRole().getRoleName().toUpperCase();
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + roleName));
+            String normalizedRole = normalizeRole(user.getRole().getRoleName());
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + normalizedRole));
             
             // Базовые права для клиента
             authorities.add(new SimpleGrantedAuthority("PERMISSION_CREATE_ORDER"));
@@ -99,5 +99,13 @@ public class CustomerUserDetailsService implements UserDetailsService {
         public User getUser() {
             return user;
         }
+    }
+
+    private static String normalizeRole(String roleName) {
+        String normalized = roleName.toUpperCase().replace(" ", "_");
+        if (normalized.startsWith("ROLE_")) {
+            normalized = normalized.substring(5);
+        }
+        return normalized;
     }
 }

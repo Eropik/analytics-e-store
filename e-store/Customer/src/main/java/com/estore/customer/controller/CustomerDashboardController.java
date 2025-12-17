@@ -23,7 +23,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/customer/dashboard")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:8020", "null"})
 public class CustomerDashboardController {
 
     private final CustomerProfileService customerProfileService;
