@@ -158,6 +158,17 @@ public class ProductServiceImpl implements ProductService {
     public Page<Product> searchProducts(String search, Pageable pageable) {
         return productRepository.searchByNameOrDescription(search, pageable);
     }
+
+    @Override
+    public Page<Product> searchProductsAdvanced(UUID productId,
+                                                Integer categoryId,
+                                                Integer brandId,
+                                                BigDecimal minPrice,
+                                                BigDecimal maxPrice,
+                                                String search,
+                                                Pageable pageable) {
+        return productRepository.searchAdvanced(productId, categoryId, brandId, minPrice, maxPrice, search, pageable);
+    }
     
     @Override
     public Page<Product> getProductsByMinRating(BigDecimal minRating, Pageable pageable) {

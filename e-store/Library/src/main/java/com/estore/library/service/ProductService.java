@@ -31,6 +31,14 @@ public interface ProductService {
     Page<Product> getProductsByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
     
     Page<Product> searchProducts(String search, Pageable pageable);
+
+    Page<Product> searchProductsAdvanced(UUID productId,
+                                         Integer categoryId,
+                                         Integer brandId,
+                                         BigDecimal minPrice,
+                                         BigDecimal maxPrice,
+                                         String search,
+                                         Pageable pageable);
     
     Page<Product> getProductsByMinRating(BigDecimal minRating, Pageable pageable);
     

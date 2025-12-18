@@ -39,6 +39,32 @@ public interface AnalyzeService {
      * Прогноз продаж по месяцам по категории
      */
     ForecastDto getMonthlySalesForecast(Integer categoryId, int windowSize);
+
+    // Product analytics
+    List<PieItemDto> getCategoryShare();
+    List<PieItemDto> getBrandShare();
+    List<BucketItemDto> getPriceBuckets();
+    List<PieItemDto> getTopCitiesInRoutes();
+    List<BucketItemDto> getRouteDistanceBuckets();
+
+    // User analytics
+    List<AgeBucketDto> getAgeBuckets5y();
+    List<BucketItemDto> getLoginByHourLast30d();
+
+    // Order analytics
+    List<PieItemDto> getTopBrands();
+    List<PieItemDto> getTopCategories();
+    List<PieItemDto> getTopProducts();
+    List<TimeSeriesItemDto> getRevenueByMonthLastYear();
+    List<TimeSeriesItemDto> getBestsellersByMonth();
+
+    // Analyze combined
+    List<PieItemDto> analyzeGeneric(String scope, String gender, String ageGroup, Integer month);
+
+    // Order filtered by status/gender/age/category/brand
+    List<PieItemDto> getOrderBrandsByFilter(String status, String gender, String ageGroup, Integer categoryId, Integer brandId);
+    List<PieItemDto> getOrderCategoriesByFilter(String status, String gender, String ageGroup, Integer categoryId, Integer brandId);
+    List<PieItemDto> getOrderProductsByFilter(String status, String gender, String ageGroup, Integer categoryId, Integer brandId);
 }
 
 

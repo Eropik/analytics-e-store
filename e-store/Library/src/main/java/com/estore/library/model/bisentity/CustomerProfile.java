@@ -45,4 +45,7 @@ public class CustomerProfile {
 
     @Column(name = "profile_picture_url")
     private String profilePictureUrl;
+
+    @Column(name = "gender", length = 1)
+    private String gender; // N/F/M
 }

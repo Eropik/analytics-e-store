@@ -3,6 +3,7 @@ package com.estore.admin.controller;
 import com.estore.library.model.bisentity.AdminProfile;
 import com.estore.library.model.bisentity.User;
 import com.estore.library.service.AdminProfileService;
+import com.estore.library.service.LoginLogService;
 import com.estore.library.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ public class AuthController {
     
     private final UserService userService;
     private final AdminProfileService adminProfileService;
+    private final LoginLogService loginLogService;
     
     /**
      * Авторизация администратора
@@ -61,6 +63,8 @@ public class AuthController {
             
             // Обновление времени входа
             userService.updateLastLogin(user.getUserId());
+            // Лог входа
+            loginLogService.logLogin(user.getUserId(), "admin-frontend");
             
             // Получение профиля админа
             Optional<AdminProfile> profileOpt = adminProfileService.getProfileById(user.getUserId());

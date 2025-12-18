@@ -58,4 +58,28 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     
     @Query("SELECT p FROM Product p WHERE p.isAvailable = true ORDER BY p.createdAt DESC")
     Page<Product> findNewest(Pageable pageable);
+
+    @Query("""
+           SELECT p FROM Product p
+           LEFT JOIN FETCH p.category c
+           LEFT JOIN FETCH p.brand b
+           WHERE (:productId IS NULL OR p.productId = :productId)
+             AND (:categoryId IS NULL OR c.categoryId = :categoryId)
+             AND (:brandId IS NULL OR b.brandId = :brandId)
+             AND (:minPrice IS NULL OR p.price >= :minPrice)
+             AND (:maxPrice IS NULL OR p.price <= :maxPrice)
+             AND (
+                 :search IS NULL OR :search = '' OR
+                 LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                 LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))
+             )
+           """)
+    Page<Product> searchAdvanced(
+            @Param("productId") UUID productId,
+            @Param("categoryId") Integer categoryId,
+            @Param("brandId") Integer brandId,
+            @Param("minPrice") BigDecimal minPrice,
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("search") String search,
+            Pageable pageable);
 }

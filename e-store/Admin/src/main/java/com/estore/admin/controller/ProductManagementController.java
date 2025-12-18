@@ -22,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.estore.library.dto.product.request.ProductCreateRequest;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -75,6 +76,56 @@ public class ProductManagementController {
 
             return ResponseEntity.ok(Map.of(
                     "products", productDtos, // Возвращаем список DTO
+                    "currentPage", productsPage.getNumber(),
+                    "totalPages", productsPage.getTotalPages(),
+                    "totalItems", productsPage.getTotalElements()
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Поиск/фильтр товаров (id, имя, категория, бренд, цена)
+     * GET /api/admin/products/search
+     */
+    @GetMapping("/search")
+    public ResponseEntity<?> searchProductsAdvanced(
+            @RequestParam UUID adminUserId,
+            @RequestParam(required = false) UUID productId,
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) Integer brandId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+
+        try {
+            if (!checkAccess(adminUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. PRODUCT_MANAGE department required"));
+            }
+
+            Pageable pageable = PageRequest.of(page, size);
+            Page<Product> productsPage = productService.searchProductsAdvanced(
+                    productId,
+                    categoryId,
+                    brandId,
+                    minPrice,
+                    maxPrice,
+                    query,
+                    pageable
+            );
+
+            List<ProductResponseDto> productDtos = productsPage.getContent().stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                    "products", productDtos,
                     "currentPage", productsPage.getNumber(),
                     "totalPages", productsPage.getTotalPages(),
                     "totalItems", productsPage.getTotalElements()
@@ -173,6 +224,10 @@ public class ProductManagementController {
                     })
                     .collect(Collectors.toList());
             dto.setImages(imageDtos);
+            // если mainImageUrl пустое — берем первое из галереи
+            if (dto.getMainImageUrl() == null && !imageDtos.isEmpty()) {
+                dto.setMainImageUrl(imageDtos.get(0).getImageUrl());
+            }
         } else {
             dto.setImages(List.of());
         }
@@ -208,6 +263,36 @@ public class ProductManagementController {
 
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Получить товар по ID (детали + изображения)
+     * GET /api/admin/products/{productId}
+     */
+    @GetMapping("/{productId}")
+    public ResponseEntity<?> getProductById(
+            @RequestParam UUID adminUserId,
+            @PathVariable UUID productId) {
+
+        try {
+            if (!checkAccess(adminUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied. PRODUCT_MANAGE department required"));
+            }
+
+            Optional<Product> productOpt = productService.getProductById(productId);
+            if (productOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Product not found"));
+            }
+
+            ProductResponseDto dto = convertToDto(productOpt.get());
+            return ResponseEntity.ok(dto);
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));

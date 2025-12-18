@@ -6,6 +6,7 @@ import com.estore.library.model.dicts.Role;
 import com.estore.library.service.CustomerProfileService;
 import com.estore.library.service.RoleService;
 import com.estore.library.service.UserService;
+import com.estore.library.service.LoginLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,7 @@ public class AuthController {
     private final UserService userService;
     private final CustomerProfileService customerProfileService;
     private final RoleService roleService;
+    private final LoginLogService loginLogService;
     private final PasswordEncoder passwordEncoder;
     
     /**
@@ -120,6 +122,7 @@ public class AuthController {
             
             // Обновление времени последнего входа
             userService.updateLastLogin(user.getUserId());
+            loginLogService.logLogin(user.getUserId(), "customer-frontend");
             
             // Получение профиля
             Optional<CustomerProfile> profileOpt = customerProfileService.getProfileById(user.getUserId());

@@ -35,12 +35,94 @@ public class AnalyticsController {
     private final OrderItemService orderItemService;
     private final OrderStatusRepository orderStatusRepository;
     private final AnalyzeService analyzeService;
+    private final LoginLogService loginLogService;
 
     /**
      * Проверка доступа к аналитике
      */
     private boolean checkAccess(UUID adminUserId) {
         return adminProfileService.hasAnalyticsAccess(adminUserId);
+    }
+
+    // ===== Новые аналитические секции =====
+
+    @GetMapping("/product/overview")
+    public ResponseEntity<?> productOverview(@RequestParam UUID adminUserId) {
+        if (!checkAccess(adminUserId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access denied"));
+        }
+        return ResponseEntity.ok(Map.of(
+                "categoryShare", analyzeService.getCategoryShare(),
+                "brandShare", analyzeService.getBrandShare(),
+                "priceBuckets", analyzeService.getPriceBuckets(),
+                "topCitiesRoutes", analyzeService.getTopCitiesInRoutes(),
+                "routeDistanceBuckets", analyzeService.getRouteDistanceBuckets()
+        ));
+    }
+
+    @GetMapping("/user/overview")
+    public ResponseEntity<?> userOverview(@RequestParam UUID adminUserId) {
+        if (!checkAccess(adminUserId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access denied"));
+        }
+        return ResponseEntity.ok(Map.of(
+                "ageBuckets", analyzeService.getAgeBuckets5y(),
+                "loginByHour", analyzeService.getLoginByHourLast30d()
+        ));
+    }
+
+    @GetMapping("/order/overview")
+    public ResponseEntity<?> orderOverview(@RequestParam UUID adminUserId) {
+        if (!checkAccess(adminUserId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access denied"));
+        }
+        return ResponseEntity.ok(Map.of(
+                "topBrands", analyzeService.getTopBrands(),
+                "topCategories", analyzeService.getTopCategories(),
+                "topProducts", analyzeService.getTopProducts(),
+                "revenueByMonth", analyzeService.getRevenueByMonthLastYear(),
+                "bestsellersByMonth", analyzeService.getBestsellersByMonth()
+        ));
+    }
+
+    @GetMapping("/order/filter")
+    public ResponseEntity<?> orderFilter(
+            @RequestParam UUID adminUserId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String gender,
+            @RequestParam(required = false) String ageGroup,
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) Integer brandId
+    ) {
+        if (!checkAccess(adminUserId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access denied"));
+        }
+        return ResponseEntity.ok(Map.of(
+                "brands", analyzeService.getOrderBrandsByFilter(status, gender, ageGroup, categoryId, brandId),
+                "categories", analyzeService.getOrderCategoriesByFilter(status, gender, ageGroup, categoryId, brandId),
+                "products", analyzeService.getOrderProductsByFilter(status, gender, ageGroup, categoryId, brandId)
+        ));
+    }
+
+    @GetMapping("/analyze")
+    public ResponseEntity<?> analyzeGeneric(
+            @RequestParam UUID adminUserId,
+            @RequestParam(defaultValue = "products") String scope,
+            @RequestParam(required = false) String gender,
+            @RequestParam(required = false) String ageGroup,
+            @RequestParam(required = false) Integer month
+    ) {
+        if (!checkAccess(adminUserId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access denied"));
+        }
+        return ResponseEntity.ok(Map.of(
+                "result", analyzeService.analyzeGeneric(scope, gender, ageGroup, month)
+        ));
     }
 
     /**
