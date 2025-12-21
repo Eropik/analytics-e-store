@@ -1,6 +1,7 @@
 package com.estore.library.model.bisentity;
 
 import com.estore.library.model.dicts.Role;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.GenericGenerator;
@@ -10,6 +11,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "\"user\"")
 @Data
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "customerProfile", "adminProfile"})
 public class User {
     @Id
     @GeneratedValue(generator = "uuid2")

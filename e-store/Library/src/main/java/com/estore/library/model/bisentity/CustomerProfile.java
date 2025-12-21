@@ -1,5 +1,6 @@
 package com.estore.library.model.bisentity;
 import com.estore.library.model.dicts.City;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -11,6 +12,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "customer_profile")
 @Data
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class CustomerProfile {
     @Id
     @Column(name = "user_id", columnDefinition = "uuid")
@@ -19,6 +21,7 @@ public class CustomerProfile {
     @OneToOne
     @MapsId
     @JoinColumn(name = "user_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "customerProfile", "adminProfile"})
     private User user;
 
     @Column(name = "first_name", nullable = false, length = 50)
@@ -38,6 +41,7 @@ public class CustomerProfile {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "city_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private City city;
 
     @Column(name = "date_of_birth")

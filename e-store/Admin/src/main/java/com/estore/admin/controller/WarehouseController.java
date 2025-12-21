@@ -91,9 +91,9 @@ public class WarehouseController {
             @RequestBody Warehouse warehouse) {
         
         try {
-            if (!adminProfileService.hasProductManagementAccess(adminUserId)) {
+            if (!checkAccess(adminUserId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Access denied. PRODUCT_MANAGE required"));
+                        .body(Map.of("error", "Access denied"));
             }
             
             Warehouse created = warehouseService.createWarehouse(warehouse);
@@ -118,7 +118,7 @@ public class WarehouseController {
             @RequestBody Warehouse warehouse) {
         
         try {
-            if (!adminProfileService.hasProductManagementAccess(adminUserId)) {
+            if (!checkAccess(adminUserId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Access denied"));
             }
@@ -143,7 +143,7 @@ public class WarehouseController {
             @PathVariable Long warehouseId) {
         
         try {
-            if (!adminProfileService.hasProductManagementAccess(adminUserId)) {
+            if (!checkAccess(adminUserId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Access denied"));
             }

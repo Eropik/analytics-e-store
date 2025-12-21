@@ -466,6 +466,7 @@ public class UserManagementController {
             profileDto.setTotalSpent(profile.getTotalSpent());
             profileDto.setOrdersCount(profile.getOrdersCount());
             profileDto.setProfilePictureUrl(profile.getProfilePictureUrl());
+            profileDto.setGender(profile.getGender());
 
             // City (LAZY, если не JOIN FETCH, может быть null или вызвать ошибку)
             if (profile.getCity() != null) {

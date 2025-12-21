@@ -19,7 +19,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/customer/products")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:8020", "null"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8020", "null"})
 public class ProductController {
     
     private final ProductService productService;
@@ -193,6 +193,10 @@ public class ProductController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
+    /**
+     * Получить список категорий (публично для клиента)
+     */
     
     /**
      * Топ товаров по рейтингу

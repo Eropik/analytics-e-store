@@ -1,6 +1,8 @@
 package com.estore.library.model.bisentity;
 
 import com.estore.library.model.bisentity.CartItem;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.GenericGenerator;
@@ -11,6 +13,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "shopping_cart")
 @Data
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ShoppingCart {
     @Id
     @GeneratedValue(generator = "uuid2")
@@ -20,6 +23,7 @@ public class ShoppingCart {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", unique = true, nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User user;
 
     @Column(name = "created_at")
@@ -29,5 +33,6 @@ public class ShoppingCart {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<CartItem> items;
 }

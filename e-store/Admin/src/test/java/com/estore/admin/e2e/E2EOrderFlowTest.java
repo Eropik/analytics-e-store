@@ -388,7 +388,6 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 public class E2EOrderFlowTest {
 
-    // --- Мокаем все сервисы, которые вызываются в тесте ---
 
     @MockBean
     private ProductService productService;
@@ -402,13 +401,8 @@ public class E2EOrderFlowTest {
     @MockBean
     private UserService userService;
 
-    // Вспомогательные сервисы/репозитории, которые обычно используются для setup,
-    // теперь тоже мокаются, но их мокинг может быть более простым (если они не важны
-    // для основного потока OrderFlow, их можно не использовать, но для полноты мокаем)
     @MockBean
     private OrderStatusRepository orderStatusRepository;
-
-    // --- Объекты, используемые в тесте ---
 
     private final UUID ADMIN_USER_ID = UUID.randomUUID();
     private final UUID CUSTOMER_USER_ID = UUID.randomUUID();
@@ -433,8 +427,6 @@ public class E2EOrderFlowTest {
 
     @BeforeEach
     void setUp() {
-        // --- 1. Инициализация Модель Объектов ---
-
         category = new Category(CATEGORY_ID, "Electronics");
         brand = new Brand(BRAND_ID, "TestBrand");
 
@@ -465,16 +457,12 @@ public class E2EOrderFlowTest {
         shoppingCart.setUser(customerUser);
         shoppingCart.setItems(Collections.emptyList());
 
-        // --- 2. Настройка Моков (поведение по умолчанию) ---
 
-        // Мокинг productService.createProduct(productToCreate)
         when(productService.createProduct(any(Product.class))).thenReturn(product);
 
-        // Мокинг productService.searchProducts()
         Page<Product> productPage = new PageImpl<>(List.of(product), PageRequest.of(0, 10), 1);
         when(productService.searchProducts(eq("Test"), any(PageRequest.class))).thenReturn(productPage);
 
-        // Мокинг shoppingCartService.getCartWithItems()
         CartItem cartItem = new CartItem();
         cartItem.setProduct(product);
         cartItem.setQuantity(2);
@@ -491,20 +479,18 @@ public class E2EOrderFlowTest {
         createdOrder.setTotalAmount(product.getPrice().multiply(BigDecimal.valueOf(2)));
         when(orderService.createOrder(any(Order.class))).thenReturn(createdOrder);
 
-        // Мокинг orderService.getOrderById() для Шага 5
-        // 1-й вызов: IN_TRANSIT
+
         Order inTransitOrder = new Order();
         inTransitOrder.setId(ORDER_ID);
         inTransitOrder.setStatus(inTransitStatus);
 
-        // 2-й вызов: DELIVERED
         Order deliveredOrder = new Order();
         deliveredOrder.setId(ORDER_ID);
         deliveredOrder.setStatus(deliveredStatus);
 
         when(orderService.getOrderById(eq(ORDER_ID)))
-                .thenReturn(Optional.of(inTransitOrder)) // Первый вызов после IN_TRANSIT
-                .thenReturn(Optional.of(deliveredOrder)); // Второй вызов после DELIVERED
+                .thenReturn(Optional.of(inTransitOrder))
+                .thenReturn(Optional.of(deliveredOrder));
 
         // Мокинг orderStatusRepository (необязательно, но для полноты)
         when(orderStatusRepository.findByStatusName(eq("PROCESSING"))).thenReturn(Optional.of(processingStatus));
@@ -514,8 +500,8 @@ public class E2EOrderFlowTest {
 
     @Test
     void testFullOrderFlow() {
-        // Шаг 1: Админ добавляет товар
-        Product productToCreate = new Product(); // Фактический объект, передаваемый в сервис
+
+        Product productToCreate = new Product();
         productToCreate.setName("Test Product");
 
         Product resultProduct = productService.createProduct(productToCreate);
@@ -524,14 +510,13 @@ public class E2EOrderFlowTest {
         assertThat(resultProduct.getName()).isEqualTo("Test Product");
         verify(productService, times(1)).createProduct(any(Product.class));
 
-        // Шаг 2: Заказчик ищет товар
+
         var foundProducts = productService.searchProducts("Test", PageRequest.of(0, 10));
         assertThat(foundProducts.getContent()).isNotEmpty();
         assertThat(foundProducts.getContent().stream()
                 .anyMatch(p -> p.getProductId().equals(PRODUCT_ID))).isTrue();
         verify(productService, times(1)).searchProducts(eq("Test"), any(PageRequest.class));
 
-        // Шаг 3: Заказчик добавляет товар в корзину
         shoppingCartService.addProductToCart(
                 CUSTOMER_USER_ID,
                 PRODUCT_ID,
@@ -549,8 +534,6 @@ public class E2EOrderFlowTest {
                 eq(CUSTOMER_USER_ID), eq(PRODUCT_ID), eq(2), eq(product.getPrice()));
         verify(shoppingCartService, times(1)).getCartWithItems(eq(CUSTOMER_USER_ID));
 
-
-        // Шаг 4: Заказчик подтверждает заказ
         Order orderToCreate = new Order(); // Объект, который мы передаем
         orderToCreate.setStatus(processingStatus);
 
@@ -559,24 +542,18 @@ public class E2EOrderFlowTest {
         assertThat(resultOrder.getStatus().getStatusName()).isEqualTo("PROCESSING");
         verify(orderService, times(1)).createOrder(any(Order.class));
 
-        // Шаг 5: Админ обновляет статус заказа PROCESSING → IN_TRANSIT → DELIVERED
-
-        // Обновление до IN_TRANSIT
         orderService.updateOrderStatus(ORDER_ID, IN_TRANSIT_STATUS_ID);
         var updatedOrder1 = orderService.getOrderById(ORDER_ID);
         assertThat(updatedOrder1).isPresent();
         assertThat(updatedOrder1.get().getStatus().getStatusName()).isEqualTo("IN_TRANSIT");
 
-        // Обновление до DELIVERED
         orderService.updateOrderStatus(ORDER_ID, DELIVERED_STATUS_ID);
         var updatedOrder2 = orderService.getOrderById(ORDER_ID);
         assertThat(updatedOrder2).isPresent();
         assertThat(updatedOrder2.get().getStatus().getStatusName()).isEqualTo("DELIVERED");
 
-        // Проверка вызовов методов обновления статуса и получения заказа
         verify(orderService, times(1)).updateOrderStatus(eq(ORDER_ID), eq(IN_TRANSIT_STATUS_ID));
         verify(orderService, times(1)).updateOrderStatus(eq(ORDER_ID), eq(DELIVERED_STATUS_ID));
-        // getOrderById должен быть вызван 2 раза (после каждого обновления)
         verify(orderService, times(2)).getOrderById(eq(ORDER_ID));
     }
 }

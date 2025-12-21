@@ -19,3 +19,13 @@ databaseChangeLog:
             splitStatements: true
             stripComments: true
             endDelimiter: "//"
+
+  - changeSet:
+      id: 3-gender-logs_logics
+      author: egor2
+      changes:
+        - sqlFile:
+            path: sql/V2__Add_Gender_and_Login_Log.sql
+            relativeToChangelogFile: true
+            splitStatements: true
+            stripComments: true

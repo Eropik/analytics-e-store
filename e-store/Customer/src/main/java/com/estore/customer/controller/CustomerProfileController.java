@@ -4,11 +4,17 @@ import com.estore.library.model.bisentity.CustomerProfile;
 import com.estore.library.model.dicts.City;
 import com.estore.library.service.CustomerProfileService;
 import com.estore.library.service.CityService;
+import com.nimbusds.openid.connect.sdk.claims.Gender;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,7 +25,7 @@ import java.util.UUID;
 @RequestMapping("/api/customer/profile")
 @RequiredArgsConstructor
 /*@CrossOrigin(origins = "http://localhost:3000")*/
-@CrossOrigin(origins = {"http://localhost:8020", "null"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8020", "null"})
 public class CustomerProfileController {
     
     private final CustomerProfileService customerProfileService;
@@ -55,6 +61,7 @@ public class CustomerProfileController {
                 response.put("cityId", profile.getCity().getCityId());
                 response.put("cityName", profile.getCity().getCityName());
             }
+            response.put("gender", profile.getGender());
             
             return ResponseEntity.ok(response);
             
@@ -100,6 +107,9 @@ public class CustomerProfileController {
             if (request.getCityId() != null) {
                 Optional<City> cityOpt = cityService.getCityById(request.getCityId());
                 cityOpt.ifPresent(profile::setCity);
+            }
+            if (request.getGenderString() != null) {
+                profile.setGender(request.getGenderString());
             }
             
             CustomerProfile updated = customerProfileService.updateProfile(userId, profile);
@@ -166,6 +176,60 @@ public class CustomerProfileController {
             "available", profile.isEmpty()
         ));
     }
+
+    /**
+     * Получить список городов
+     * GET /api/customer/cities
+     */
+    @GetMapping("/cities")
+    public ResponseEntity<?> getCities() {
+        try {
+            return ResponseEntity.ok(cityService.getAllCities());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Загрузка аватара
+     * POST /api/customer/profile/{userId}/avatar
+     */
+    @PostMapping(value = "/{userId}/avatar", consumes = {"multipart/form-data"})
+    public ResponseEntity<?> uploadAvatar(@PathVariable UUID userId,
+                                          @RequestPart("file") MultipartFile file) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
+            }
+            // директория хранения
+            Path uploadDir = Paths.get("uploads/profile-pictures");
+            Files.createDirectories(uploadDir);
+
+            String original = file.getOriginalFilename();
+            String ext = "";
+            if (original != null && original.contains(".")) {
+                ext = original.substring(original.lastIndexOf("."));
+            }
+            String filename = UUID.randomUUID() + ext;
+            Path dest = uploadDir.resolve(filename);
+            Files.copy(file.getInputStream(), dest);
+
+            String publicUrl = "http://localhost:8020/static/img/profile-pictures/" + filename;
+            // обновим ссылку в профиле
+            Optional<CustomerProfile> profileOpt = customerProfileService.getProfileById(userId);
+            if (profileOpt.isPresent()) {
+                CustomerProfile profile = profileOpt.get();
+                profile.setProfilePictureUrl(publicUrl);
+                customerProfileService.updateProfile(userId, profile);
+            }
+
+            return ResponseEntity.ok(Map.of("url", publicUrl));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
     
     // Вспомогательный метод
     private Map<String, Object> buildProfileResponse(CustomerProfile profile) {
@@ -195,7 +259,7 @@ public class CustomerProfileController {
         private LocalDate dateOfBirth;
         private String profilePictureUrl;
         private Integer cityId;
-        
+        private Gender gender;
         public String getFirstName() { return firstName; }
         public void setFirstName(String firstName) { this.firstName = firstName; }
         
@@ -215,5 +279,8 @@ public class CustomerProfileController {
         
         public Integer getCityId() { return cityId; }
         public void setCityId(Integer cityId) { this.cityId = cityId; }
+
+         public String getGenderString() { return gender != null ? gender.getValue() : null; }
+         public void setGender(Gender gender) { this.gender = gender; }
     }
 }

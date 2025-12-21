@@ -4,6 +4,8 @@ import com.estore.library.model.dicts.Brand;
 import com.estore.library.model.dicts.Category;
 import com.estore.library.model.dicts.ProductImage;
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Data;
 import org.hibernate.annotations.GenericGenerator;
 import java.math.BigDecimal;
@@ -14,6 +16,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "product")
 @Data
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Product {
     @Id
     @GeneratedValue(generator = "uuid2")
@@ -60,5 +63,6 @@ public class Product {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<ProductImage> images;
 }

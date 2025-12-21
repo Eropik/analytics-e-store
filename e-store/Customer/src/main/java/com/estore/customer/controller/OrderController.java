@@ -2,8 +2,11 @@ package com.estore.customer.controller;
 
 import com.estore.library.model.bisentity.Order;
 import com.estore.library.model.bisentity.OrderItem;
-import com.estore.library.service.*;
+import com.estore.library.model.bisentity.Product;
+import com.estore.library.model.bisentity.User;
 import com.estore.library.model.dicts.*;
+import com.estore.library.service.*;
+import com.estore.library.repository.dicts.OrderStatusRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,7 +22,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/customer/orders")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:8020", "null"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8020", "null"})
 public class OrderController {
     
     private final OrderService orderService;
@@ -28,6 +31,11 @@ public class OrderController {
     private final DeliveryMethodService deliveryMethodService;
     private final PaymentMethodService paymentMethodService;
     private final WarehouseService warehouseService;
+    private final ProductService productService;
+    private final UserService userService;
+    private final CityService cityService;
+    private final OrderStatusRepository orderStatusRepository;
+    private final com.estore.library.service.ShoppingCartService shoppingCartService;
     
     /**
      * Создать новый заказ
@@ -36,14 +44,44 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<?> createOrder(@RequestBody CreateOrderRequest request) {
         try {
+            User user = userService.getUserById(request.getUserId())
+                    .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.getUserId()));
+            City city = cityService.getCityById(request.getShippingCityId())
+                    .orElseThrow(() -> new IllegalArgumentException("City not found: " + request.getShippingCityId()));
+            DeliveryMethod deliveryMethod = deliveryMethodService.getDeliveryMethodById(request.getDeliveryMethodId())
+                    .orElseThrow(() -> new IllegalArgumentException("Delivery method not found: " + request.getDeliveryMethodId()));
+            PaymentMethod paymentMethod = paymentMethodService.getPaymentMethodById(request.getPaymentMethodId())
+                    .orElseThrow(() -> new IllegalArgumentException("Payment method not found: " + request.getPaymentMethodId()));
+
             Order order = new Order();
-            order.setUser(request.getUser());
-            order.setShippingCity(request.getShippingCity());
-            order.setShippingAddressText(request.getShippingAddress());
-            order.setDeliveryMethod(request.getDeliveryMethod());
-            order.setPaymentMethod(request.getPaymentMethod());
+            order.setUser(user);
+            order.setShippingCity(city);
+            order.setShippingAddressText(request.getShippingAddressText());
+            order.setDeliveryMethod(deliveryMethod);
+            order.setPaymentMethod(paymentMethod);
             order.setDiscountApplied(request.getDiscountApplied());
-            order.setOrderItems(request.getItems());
+            order.setOrderItems(new ArrayList<>());
+
+            if (request.getItems() != null) {
+                for (CreateOrderItem itemReq : request.getItems()) {
+                    Product product = productService.getProductById(itemReq.getProductId())
+                            .orElseThrow(() -> new IllegalArgumentException("Product not found: " + itemReq.getProductId()));
+                    int available = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
+                    int newStock = available - itemReq.getQuantity();
+                    if (newStock < 0) newStock = 0; // не даём уйти в минус, но заказ оформляем
+
+                    OrderItem item = new OrderItem();
+                    item.setOrder(order);
+                    item.setProduct(product);
+                    item.setQuantity(itemReq.getQuantity());
+                    item.setUnitPrice(product.getPrice());
+                    order.getOrderItems().add(item);
+
+                    // уменьшение склада
+                    product.setStockQuantity(newStock);
+                    productService.updateProduct(product.getProductId(), product);
+                }
+            }
             
             Order createdOrder = orderService.createOrder(order);
             
@@ -56,6 +94,63 @@ public class OrderController {
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
             
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Отмена заказа (возврат остатков)
+     */
+    @PostMapping("/{orderId}/cancel")
+    public ResponseEntity<?> cancelOrder(@PathVariable UUID orderId, @RequestParam UUID userId) {
+        try {
+            Order order = orderService.getOrderById(orderId)
+                    .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+            if (!order.getUser().getUserId().equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Forbidden"));
+            }
+
+            List<OrderItem> items = orderItemService.getOrderItemsByOrderId(orderId);
+            for (OrderItem item : items) {
+                Product product = item.getProduct();
+                product.setStockQuantity(product.getStockQuantity() + item.getQuantity());
+                productService.updateProduct(product.getProductId(), product);
+            }
+
+            OrderStatus cancelled = orderStatusRepository.findByStatusName("CANCELLED")
+                    .orElseThrow(() -> new IllegalStateException("Status 'CANCELLED' not found"));
+            order.setStatus(cancelled);
+            orderService.updateOrder(orderId, order);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Order cancelled"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Список способов доставки (публично)
+     */
+    @GetMapping("/delivery-methods")
+    public ResponseEntity<?> getDeliveryMethods() {
+        try {
+            return ResponseEntity.ok(deliveryMethodService.getAllDeliveryMethods());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Список способов оплаты (публично)
+     */
+    @GetMapping("/payment-methods")
+    public ResponseEntity<?> getPaymentMethods() {
+        try {
+            return ResponseEntity.ok(paymentMethodService.getAllPaymentMethods());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
@@ -179,81 +274,37 @@ public class OrderController {
     
     // DTO класс
     public static class CreateOrderRequest {
-        private com.estore.library.model.bisentity.User user;
-        private com.estore.library.model.dicts.City shippingCity;
-        private String shippingAddress;
-        private com.estore.library.model.dicts.DeliveryMethod deliveryMethod;
-        private com.estore.library.model.dicts.PaymentMethod paymentMethod;
+        private UUID userId;
+        private Integer shippingCityId;
+        private String shippingAddressText;
+        private Integer deliveryMethodId;
+        private Integer paymentMethodId;
         private Double discountApplied;
-        private List<OrderItem> items;
-        
-        public com.estore.library.model.bisentity.User getUser() { return user; }
-        public void setUser(com.estore.library.model.bisentity.User user) { this.user = user; }
-        
-        public com.estore.library.model.dicts.City getShippingCity() { return shippingCity; }
-        public void setShippingCity(com.estore.library.model.dicts.City shippingCity) { 
-            this.shippingCity = shippingCity; 
-        }
-        
-        public String getShippingAddress() { return shippingAddress; }
-        public void setShippingAddress(String shippingAddress) { 
-            this.shippingAddress = shippingAddress; 
-        }
-        
-        public com.estore.library.model.dicts.DeliveryMethod getDeliveryMethod() { 
-            return deliveryMethod; 
-        }
-        public void setDeliveryMethod(com.estore.library.model.dicts.DeliveryMethod deliveryMethod) { 
-            this.deliveryMethod = deliveryMethod; 
-        }
-        
-        public com.estore.library.model.dicts.PaymentMethod getPaymentMethod() { 
-            return paymentMethod; 
-        }
-        public void setPaymentMethod(com.estore.library.model.dicts.PaymentMethod paymentMethod) { 
-            this.paymentMethod = paymentMethod; 
-        }
-        
-        public Double getDiscountApplied() { return discountApplied; }
+        private List<CreateOrderItem> items;
 
-        public void setDiscountApplied(Double discountApplied) {
-            this.discountApplied = discountApplied; 
-        }
-        
-        public List<OrderItem> getItems() { return items; }
-        public void setItems(List<OrderItem> items) { this.items = items; }
+        public UUID getUserId() { return userId; }
+        public void setUserId(UUID userId) { this.userId = userId; }
+        public Integer getShippingCityId() { return shippingCityId; }
+        public void setShippingCityId(Integer shippingCityId) { this.shippingCityId = shippingCityId; }
+        public String getShippingAddressText() { return shippingAddressText; }
+        public void setShippingAddressText(String shippingAddressText) { this.shippingAddressText = shippingAddressText; }
+        public Integer getDeliveryMethodId() { return deliveryMethodId; }
+        public void setDeliveryMethodId(Integer deliveryMethodId) { this.deliveryMethodId = deliveryMethodId; }
+        public Integer getPaymentMethodId() { return paymentMethodId; }
+        public void setPaymentMethodId(Integer paymentMethodId) { this.paymentMethodId = paymentMethodId; }
+        public Double getDiscountApplied() { return discountApplied; }
+        public void setDiscountApplied(Double discountApplied) { this.discountApplied = discountApplied; }
+        public List<CreateOrderItem> getItems() { return items; }
+        public void setItems(List<CreateOrderItem> items) { this.items = items; }
     }
-    
-    // ========== НОВЫЕ ЭНДПОИНТЫ ==========
-    
-    /**
-     * Получить доступные методы доставки
-     * GET /api/customer/orders/delivery-methods
-     */
-    @GetMapping("/delivery-methods")
-    public ResponseEntity<?> getDeliveryMethods() {
-        try {
-            List<DeliveryMethod> methods = deliveryMethodService.getAllDeliveryMethods();
-            return ResponseEntity.ok(methods);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-    
-    /**
-     * Получить доступные методы оплаты
-     * GET /api/customer/orders/payment-methods
-     */
-    @GetMapping("/payment-methods")
-    public ResponseEntity<?> getPaymentMethods() {
-        try {
-            List<PaymentMethod> methods = paymentMethodService.getAllPaymentMethods();
-            return ResponseEntity.ok(methods);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
-        }
+
+    public static class CreateOrderItem {
+        private UUID productId;
+        private Integer quantity;
+        public UUID getProductId() { return productId; }
+        public void setProductId(UUID productId) { this.productId = productId; }
+        public Integer getQuantity() { return quantity; }
+        public void setQuantity(Integer quantity) { this.quantity = quantity; }
     }
     
     /**

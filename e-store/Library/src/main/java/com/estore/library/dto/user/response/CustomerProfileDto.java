@@ -18,4 +18,5 @@ public class CustomerProfileDto {
     private Integer cityId;
     private LocalDate dateOfBirth;
     private String profilePictureUrl;
+    private String gender;
 }

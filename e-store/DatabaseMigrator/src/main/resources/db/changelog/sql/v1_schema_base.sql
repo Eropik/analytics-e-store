@@ -1,11 +1,6 @@
 
--- Активация расширения для генерации UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ===================================
--- 1. СПРАВОЧНЫЕ ТАБЛИЦЫ
--- ===================================
--- Города
 CREATE TABLE city (
                       city_id SERIAL PRIMARY KEY,
                       city_name VARCHAR(100) UNIQUE NOT NULL

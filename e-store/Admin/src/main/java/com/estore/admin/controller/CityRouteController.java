@@ -69,9 +69,9 @@ public class CityRouteController {
             @RequestBody City city) {
         
         try {
-            if (!adminProfileService.hasProductManagementAccess(adminUserId)) {
+            if (!checkAccess(adminUserId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Access denied. PRODUCT_MANAGE required"));
+                        .body(Map.of("error", "Access denied"));
             }
             
             City created = cityService.createCity(city);
@@ -214,9 +214,9 @@ public class CityRouteController {
             @RequestBody CityRoute route) {
         
         try {
-            if (!adminProfileService.hasProductManagementAccess(adminUserId)) {
+            if (!checkAccess(adminUserId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Access denied. PRODUCT_MANAGE required"));
+                        .body(Map.of("error", "Access denied"));
             }
             
             CityRoute created = cityRouteService.createRoute(route);
@@ -241,7 +241,7 @@ public class CityRouteController {
             @RequestBody CityRoute route) {
         
         try {
-            if (!adminProfileService.hasProductManagementAccess(adminUserId)) {
+            if (!checkAccess(adminUserId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Access denied"));
             }
@@ -266,7 +266,7 @@ public class CityRouteController {
             @PathVariable Integer routeId) {
         
         try {
-            if (!adminProfileService.hasProductManagementAccess(adminUserId)) {
+            if (!checkAccess(adminUserId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Access denied"));
             }

@@ -87,7 +87,7 @@ public interface CityRouteRepository extends JpaRepository<CityRoute, Integer> {
                 1 AS level,
                 0.00 AS total_distance,
                 ARRAY[c.city_id] AS path_ids,
-                c.city_name AS path_name
+                CAST(c.city_name AS TEXT) AS path_name
             FROM city c
             WHERE c.city_name = :startCityName
             
@@ -99,7 +99,7 @@ public interface CityRouteRepository extends JpaRepository<CityRoute, Integer> {
                 t.level + 1,
                 t.total_distance + cr.distance_km,
                 t.path_ids || c2.city_id,
-                t.path_name || ' -> ' || c2.city_name
+                t.path_name || ' -> ' || CAST(c2.city_name AS TEXT)
             FROM bfs_search t
             JOIN city_route cr ON cr.city_a_id = t.city_id
             JOIN city c2 ON c2.city_id = cr.city_b_id
@@ -165,14 +165,22 @@ public interface CityRouteRepository extends JpaRepository<CityRoute, Integer> {
         t.path_ids || c2.city_id,
         t.path_name || ' -> ' || c2.city_name
     FROM bfs_search t
-    JOIN city_route cr ON cr.city_a_id = t.city_id
-    JOIN city c2 ON c2.city_id = cr.city_b_id
+    JOIN city_route cr ON (
+        (cr.city_a_id = t.city_id AND cr.city_b_id <> ALL(t.path_ids))
+        OR
+        (cr.city_b_id = t.city_id AND cr.city_a_id <> ALL(t.path_ids))
+    )
+    JOIN city c2 ON (
+        (cr.city_a_id = t.city_id AND c2.city_id = cr.city_b_id)
+        OR
+        (cr.city_b_id = t.city_id AND c2.city_id = cr.city_a_id)
+    )
     WHERE c2.city_id <> ALL(t.path_ids)
 )
     SELECT
         city_name AS city_name,
-        city_id AS end_city_id,             -- <-- ДОБАВЛЯЕМ ID КОНЕЧНОГО ГОРОДА
-        path_ids AS path_ids,               -- <-- ДОБАВЛЯЕМ МАССИВ ID ВСЕГО ПУТИ
+        city_id AS end_city_id,
+        path_ids AS path_ids,
         level - 1 AS transfers,
         total_distance AS total_distance,
         path_name AS path_name
