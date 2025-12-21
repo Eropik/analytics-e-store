@@ -1,0 +1,169 @@
+.profile {
+  padding: 20px;
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(rgba(5, 15, 25, 0.75), rgba(8, 20, 35, 0.75)),
+    url('../../../web_pics/cart.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: #e8f4f8;
+}
+
+.profile h1, .profile h2 {
+  color: #d0e8f0;
+}
+
+.profile label {
+  color: #d0e8f0;
+}
+
+.profile-info {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  border-radius: 8px;
+  color: #333;
+}
+
+.profile-info p {
+  margin: 10px 0;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.profile-info strong {
+  display: inline-block;
+  width: 150px;
+}
+
+.orders {
+  display: grid;
+  gap: 12px;
+}
+
+.order-card {
+  border: 1px solid rgba(238, 238, 238, 0.8);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #333;
+}
+
+.order-card p {
+  margin: 6px 0;
+}
+
+.order-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.order-row button {
+  padding: 6px 10px;
+  border: none;
+  background: #7a9bc8;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.order-row button:hover {
+  background: #6b8bb8;
+}
+
+.order-details {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.order-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.order-item img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* Статусные цвета (как в админке) */
+.order-item.status-processing {
+  background: #fff7e0;
+}
+.order-item.status-in_transit,
+.order-item.status-in transit {
+  background: #e8f1ff;
+}
+.order-item.status-delivered {
+  background: #e9fbe9;
+}
+.order-item.status-cancelled {
+  background: #fdeaea;
+}
+
+.order-meta p {
+  margin: 6px 0;
+}
+
+.actions {
+  margin-top: 12px;
+}
+
+.profile-picture img {
+  max-width: 150px;
+  border-radius: 8px;
+}
+.edit-form label {
+  display: block;
+  margin: 10px 0;
+}
+
+.edit-form input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.edit-form select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+details {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+}
+
+details[open] summary {
+  font-weight: 700;
+}
+
+details summary {
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+
+
+
+

@@ -1,0 +1,129 @@
+.city-management {
+  padding: 20px;
+  min-height: 100vh;
+  background: linear-gradient(rgba(5, 15, 25, 0.75), rgba(8, 20, 35, 0.75)),
+    url('../../../web_pics/wh_city_bg.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: #e8f4f8;
+}
+
+.city-management h1, .city-management h2, .city-management h3 {
+  color: #d0e8f0;
+}
+
+.form-block {
+  margin-bottom: 20px;
+  padding: 12px;
+  border: 1px solid rgba(224, 224, 224, 0.7);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+}
+
+.form-block h3 {
+  color: #2c4a6b !important;
+}
+
+.form-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.form-row input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.form-row button {
+  padding: 8px 12px;
+  background: #7a9bc8;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.form-row button:hover {
+  background: #6b8bb8;
+}
+
+.btn-success {
+  background: #7fb3a3 !important;
+}
+
+.btn-success:hover {
+  background: #6ba68f !important;
+}
+
+.btn-danger {
+  background: #d4a5a5 !important;
+}
+
+.btn-danger:hover {
+  background: #c89696 !important;
+}
+
+.list-block {
+  margin-top: 16px;
+}
+
+.list-box {
+  border: 1px solid rgba(224, 224, 224, 0.7);
+  border-radius: 6px;
+  padding: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2c4a6b;
+}
+
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 8px;
+  color: #2c4a6b;
+}
+
+.list-row span {
+  color: #2c4a6b;
+}
+
+.list-row:last-child {
+  border-bottom: none;
+}
+
+.error-msg {
+  background: #fdeaea;
+  color: #c0392b;
+  padding: 10px 12px;
+  border: 1px solid #e6b0aa;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.city-management details summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1.1em;
+  color: #d0e8f0 !important;
+  padding: 8px 0;
+  user-select: none;
+}
+
+.city-management details summary:hover {
+  color: #e8f4f8 !important;
+}
+
+.city-management details {
+  margin-bottom: 20px;
+}
+
