@@ -1,46 +1,39 @@
 package com.estore.library.service;
 
 import com.estore.library.dto.analyze.dto.*;
+import com.estore.library.dto.order.dto.OrderItemDto;
+import com.estore.library.model.bisentity.Order;
+import org.springframework.data.domain.jaxb.SpringDataJaxb;
 
+import java.util.Date;
 import java.util.List;
 
 public interface AnalyzeService {
-    /**
-     * Получить топ товаров по объему продаж
-     */
+
+
+    List<OrderItemDto> getAnalyze(Date startDate, Date endDate);
+
+
+
     List<BestSellerDto> getBestSellers(int limit);
 
-    /**
-     * Получить анализ по категориям и брендам
-     */
+
     List<CategoryBrandAnalysisDto> getCategoryBrandAnalysis();
 
-    /**
-     * Получить анализ по возрастным группам покупателей
-     */
+
     List<AgeGroupAnalysisDto> getAgeGroupAnalysis();
 
-    /**
-     * Получить анализ по маршрутам доставки
-     */
     List<RouteAnalysisDto> getRouteAnalysis();
 
-    /**
-     * Получить анализ по способам оплаты
-     */
+
     List<PaymentDeliveryAnalysisDto> getPaymentMethodAnalysis();
 
-    /**
-     * Получить анализ по способам доставки
-     */
+
     List<PaymentDeliveryAnalysisDto> getDeliveryMethodAnalysis();
 
-    /**
-     * Прогноз продаж по месяцам по категории
-     */
+
     ForecastDto getMonthlySalesForecast(Integer categoryId, int windowSize);
 
-    // Product analytics
     List<PieItemDto> getCategoryShare();
     List<PieItemDto> getBrandShare();
     List<BucketItemDto> getPriceBuckets();
@@ -65,6 +58,10 @@ public interface AnalyzeService {
     List<PieItemDto> getOrderBrandsByFilter(String status, String gender, String ageGroup, Integer categoryId, Integer brandId);
     List<PieItemDto> getOrderCategoriesByFilter(String status, String gender, String ageGroup, Integer categoryId, Integer brandId);
     List<PieItemDto> getOrderProductsByFilter(String status, String gender, String ageGroup, Integer categoryId, Integer brandId);
+
+    TurnoverPlanReportDto buildTurnoverPlanReport(String metric, String startMonth, String endMonth, List<Double> plannedValues);
+
+    GroupShareReportDto buildGroupShareReport(String metric, String groupBy, String startMonth, String endMonth);
 }
 
 

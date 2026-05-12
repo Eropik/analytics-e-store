@@ -152,6 +152,10 @@ export const analyticsService = {
     api.get(`/analytics/order/filter`, { params: { adminUserId, ...params } }),
   analyzeGeneric: (adminUserId, params) =>
     api.get(`/analytics/analyze`, { params: { adminUserId, ...params } }),
+  turnoverPlanReport: (adminUserId, payload) =>
+    api.post(`/analytics/analyze/turnover-plan`, payload, { params: { adminUserId } }),
+  groupShareReport: (adminUserId, payload) =>
+    api.post(`/analytics/analyze/group-share`, payload, { params: { adminUserId } }),
 };
 
 export const authService = {

@@ -51,6 +51,74 @@
   color: #333;
 }
 
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.tabs button,
+.filters button,
+.toggle-chart-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #5f81ba, #77a7dc);
+}
+
+.tabs button.active {
+  background: linear-gradient(135deg, #3f639e, #5f87c0);
+}
+
+.chart-head {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+
+.plan-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin: 10px 0 14px;
+}
+
+.plan-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #2b4363;
+}
+
+.plan-item input {
+  border: 1px solid #bfd1e8;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.analytics-table th,
+.analytics-table td {
+  border-bottom: 1px solid #e6eef8;
+  padding: 10px;
+  color: #2b4363;
+}
+
+.analytics-table th {
+  background: #edf5ff;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;

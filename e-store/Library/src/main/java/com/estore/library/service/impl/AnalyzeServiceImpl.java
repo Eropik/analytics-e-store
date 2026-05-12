@@ -1,11 +1,15 @@
 package com.estore.library.service.impl;
 
 import com.estore.library.dto.analyze.dto.*;
+import com.estore.library.dto.order.dto.OrderItemDto;
+import com.estore.library.model.bisentity.Order;
 import com.estore.library.repository.analyze.AnalyzeRepository;
 import com.estore.library.service.AnalyzeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -13,6 +17,16 @@ import java.util.List;
 public class AnalyzeServiceImpl implements AnalyzeService {
 
     private final AnalyzeRepository analyzeRepository;
+
+    @Override
+    @Transactional
+    public List<OrderItemDto> getAnalyze(Date startDate, Date endDate){
+        List<OrderItemDto> orders =analyzeRepository.getOrderForAnalysis(startDate, endDate);
+        if(orders.isEmpty()){
+            return null;
+        }
+        return orders;
+    };
 
     @Override
     public List<BestSellerDto> getBestSellers(int limit) {
@@ -127,6 +141,16 @@ public class AnalyzeServiceImpl implements AnalyzeService {
     @Override
     public List<PieItemDto> getOrderProductsByFilter(String status, String gender, String ageGroup, Integer categoryId, Integer brandId) {
         return analyzeRepository.getOrderProductsByFilter(status, gender, ageGroup, categoryId, brandId);
+    }
+
+    @Override
+    public TurnoverPlanReportDto buildTurnoverPlanReport(String metric, String startMonth, String endMonth, List<Double> plannedValues) {
+        return analyzeRepository.buildTurnoverPlanReport(metric, startMonth, endMonth, plannedValues);
+    }
+
+    @Override
+    public GroupShareReportDto buildGroupShareReport(String metric, String groupBy, String startMonth, String endMonth) {
+        return analyzeRepository.buildGroupShareReport(metric, groupBy, startMonth, endMonth);
     }
 }
 

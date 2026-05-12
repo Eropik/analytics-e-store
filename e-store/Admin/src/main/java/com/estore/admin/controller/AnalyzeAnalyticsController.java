@@ -1,6 +1,8 @@
 package com.estore.admin.controller;
 
 import com.estore.library.dto.analyze.dto.ForecastDto;
+import com.estore.library.dto.analyze.dto.GroupShareReportDto;
+import com.estore.library.dto.analyze.dto.TurnoverPlanReportDto;
 import com.estore.library.service.AdminProfileService;
 import com.estore.library.service.AnalyzeService;
 import lombok.RequiredArgsConstructor;
@@ -8,10 +10,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,6 +32,17 @@ public class AnalyzeAnalyticsController {
 
     private boolean hasAnalyzeAccess(UUID adminUserId) {
         return adminProfileService.hasAnalyticsAccess(adminUserId);
+    }
+
+    @GetMapping("/sales/growth-struct-analyze")
+    public ResponseEntity<?> finalAnalyze(@RequestParam UUID adminUserId,
+                                          @RequestParam Date StartDate,
+                                          @RequestParam Date EndDate) {
+        if (!hasAnalyzeAccess(adminUserId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access denied. ANALYZE department required"));
+        }
+        return ResponseEntity.ok(Map.of("result", analyzeService.getAnalyze(StartDate,EndDate)));
     }
 
     @GetMapping
@@ -65,6 +82,54 @@ public class AnalyzeAnalyticsController {
         }
         ForecastDto forecast = analyzeService.getMonthlySalesForecast(categoryId, windowSize);
         return ResponseEntity.ok(Map.of("forecast", forecast));
+    }
+
+    @PostMapping("/turnover-plan")
+    public ResponseEntity<?> turnoverPlan(@RequestParam UUID adminUserId,
+                                          @RequestBody TurnoverPlanRequest request) {
+        if (!hasAnalyzeAccess(adminUserId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access denied. ANALYZE department required"));
+        }
+        TurnoverPlanReportDto report = analyzeService.buildTurnoverPlanReport(
+                request.getMetric(),
+                request.getStartMonth(),
+                request.getEndMonth(),
+                request.getPlannedValues()
+        );
+        return ResponseEntity.ok(report);
+    }
+
+    @PostMapping("/group-share")
+    public ResponseEntity<?> groupShare(@RequestParam UUID adminUserId,
+                                        @RequestBody GroupShareRequest request) {
+        if (!hasAnalyzeAccess(adminUserId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Access denied. ANALYZE department required"));
+        }
+        GroupShareReportDto report = analyzeService.buildGroupShareReport(
+                request.getMetric(),
+                request.getGroupBy(),
+                request.getStartMonth(),
+                request.getEndMonth()
+        );
+        return ResponseEntity.ok(report);
+    }
+
+    @lombok.Data
+    public static class TurnoverPlanRequest {
+        private String metric;
+        private String startMonth;
+        private String endMonth;
+        private List<Double> plannedValues;
+    }
+
+    @lombok.Data
+    public static class GroupShareRequest {
+        private String metric;
+        private String groupBy;
+        private String startMonth;
+        private String endMonth;
     }
 }
 
