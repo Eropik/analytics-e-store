@@ -4,7 +4,6 @@ import com.estore.library.model.bisentity.CustomerProfile;
 import com.estore.library.model.dicts.City;
 import com.estore.library.service.CustomerProfileService;
 import com.estore.library.service.CityService;
-import com.nimbusds.openid.connect.sdk.claims.Gender;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +47,9 @@ public class CustomerProfileController {
             CustomerProfile profile = profileOpt.get();
             
             Map<String, Object> response = new HashMap<>();
+            if (profile.getUser() != null) {
+                response.put("email", profile.getUser().getEmail());
+            }
             response.put("userId", profile.getUserId());
             response.put("firstName", profile.getFirstName());
             response.put("lastName", profile.getLastName());
@@ -104,12 +106,19 @@ public class CustomerProfileController {
             if (request.getProfilePictureUrl() != null) {
                 profile.setProfilePictureUrl(request.getProfilePictureUrl());
             }
-            if (request.getCityId() != null) {
+            if (Boolean.TRUE.equals(request.getClearCity())) {
+                profile.setCity(null);
+            } else if (request.getCityId() != null) {
                 Optional<City> cityOpt = cityService.getCityById(request.getCityId());
                 cityOpt.ifPresent(profile::setCity);
             }
-            if (request.getGenderString() != null) {
-                profile.setGender(request.getGenderString());
+            if (Boolean.TRUE.equals(request.getClearGender())) {
+                profile.setGender("N");
+            } else if (request.getGender() != null && !request.getGender().trim().isEmpty()) {
+                String norm = normalizeGenderLetter(request.getGender().trim());
+                if (norm != null) {
+                    profile.setGender(norm);
+                }
             }
             
             CustomerProfile updated = customerProfileService.updateProfile(userId, profile);
@@ -231,6 +240,21 @@ public class CustomerProfileController {
         }
     }
     
+    /** M / F / N as stored in DB; null if invalid. */
+    private static String normalizeGenderLetter(String raw) {
+        if (raw == null || raw.isEmpty()) return null;
+        String u = raw.toUpperCase();
+        if (u.length() == 1 && "MFN".indexOf(u.charAt(0)) >= 0) {
+            return u;
+        }
+        return switch (u) {
+            case "MALE" -> "M";
+            case "FEMALE" -> "F";
+            case "NEUTRAL", "UNKNOWN", "UNSPECIFIED" -> "N";
+            default -> null;
+        };
+    }
+
     // Вспомогательный метод
     private Map<String, Object> buildProfileResponse(CustomerProfile profile) {
         Map<String, Object> response = new HashMap<>();
@@ -247,7 +271,9 @@ public class CustomerProfileController {
             response.put("cityId", profile.getCity().getCityId());
             response.put("cityName", profile.getCity().getCityName());
         }
-        
+
+        response.put("gender", profile.getGender());
+
         return response;
     }
     
@@ -259,7 +285,12 @@ public class CustomerProfileController {
         private LocalDate dateOfBirth;
         private String profilePictureUrl;
         private Integer cityId;
-        private Gender gender;
+        /** When true and cityId is omitted, remove city from profile (JSON: true). */
+        private Boolean clearCity;
+        /** When true, clear gender column. */
+        private Boolean clearGender;
+        /** Stored as single letter M / F / N (same as column). */
+        private String gender;
         public String getFirstName() { return firstName; }
         public void setFirstName(String firstName) { this.firstName = firstName; }
         
@@ -280,7 +311,18 @@ public class CustomerProfileController {
         public Integer getCityId() { return cityId; }
         public void setCityId(Integer cityId) { this.cityId = cityId; }
 
-         public String getGenderString() { return gender != null ? gender.getValue() : null; }
-         public void setGender(Gender gender) { this.gender = gender; }
+        public Boolean getClearCity() { return clearCity; }
+        public void setClearCity(Boolean clearCity) { this.clearCity = clearCity; }
+
+        public Boolean getClearGender() { return clearGender; }
+        public void setClearGender(Boolean clearGender) { this.clearGender = clearGender; }
+
+        public String getGender() {
+            return gender;
+        }
+
+        public void setGender(String gender) {
+            this.gender = gender;
+        }
     }
 }

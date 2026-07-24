@@ -27,35 +27,6 @@ public class RoleServiceImpl implements RoleService {
     }
     
     @Override
-    @Transactional
-    public Role updateRole(Integer roleId, Role role) {
-        Role existing = roleRepository.findById(roleId)
-                .orElseThrow(() -> new IllegalArgumentException("Role not found with id: " + roleId));
-        
-        if (!existing.getRoleName().equals(role.getRoleName()) && 
-            roleRepository.existsByRoleName(role.getRoleName())) {
-            throw new IllegalArgumentException("Role name already exists");
-        }
-        
-        existing.setRoleName(role.getRoleName());
-        return roleRepository.save(existing);
-    }
-    
-    @Override
-    @Transactional
-    public void deleteRole(Integer roleId) {
-        if (!roleRepository.existsById(roleId)) {
-            throw new IllegalArgumentException("Role not found with id: " + roleId);
-        }
-        roleRepository.deleteById(roleId);
-    }
-    
-    @Override
-    public Optional<Role> getRoleById(Integer roleId) {
-        return roleRepository.findById(roleId);
-    }
-    
-    @Override
     public Optional<Role> getRoleByName(String roleName) {
         return roleRepository.findByRoleName(roleName);
     }

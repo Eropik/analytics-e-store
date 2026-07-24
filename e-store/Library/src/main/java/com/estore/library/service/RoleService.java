@@ -9,12 +9,6 @@ public interface RoleService {
     
     Role createRole(Role role);
     
-    Role updateRole(Integer roleId, Role role);
-    
-    void deleteRole(Integer roleId);
-    
-    Optional<Role> getRoleById(Integer roleId);
-    
     Optional<Role> getRoleByName(String roleName);
     
     List<Role> getAllRoles();

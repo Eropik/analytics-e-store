@@ -34,32 +34,6 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    @Transactional
-    public User updateUser(UUID userId, User user) {
-        User existingUser = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
-        
-        if (!existingUser.getEmail().equals(user.getEmail()) && userRepository.existsByEmail(user.getEmail())) {
-            throw new IllegalArgumentException("Email already in use");
-        }
-        
-        existingUser.setEmail(user.getEmail());
-        existingUser.setPasswordHash(user.getPasswordHash());
-        existingUser.setRole(user.getRole());
-        
-        return userRepository.save(existingUser);
-    }
-    
-    @Override
-    @Transactional
-    public void deleteUser(UUID userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new IllegalArgumentException("User not found with id: " + userId);
-        }
-        userRepository.deleteById(userId);
-    }
-    
-    @Override
     public Optional<User> getUserById(UUID userId) {
         return userRepository.findById(userId);
     }
@@ -90,11 +64,6 @@ public class UserServiceImpl implements UserService {
     }
     
     @Override
-    public Page<User> getUsersRegisteredBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable) {
-        return userRepository.findByRegistrationDateBetween(startDate, endDate, pageable);
-    }
-    
-    @Override
     public Page<User> searchUsersByEmail(String search, Pageable pageable) {
         return userRepository.searchByEmail(search, pageable);
     }
@@ -121,7 +90,7 @@ public class UserServiceImpl implements UserService {
         user.setIsActive(false);
         userRepository.save(user);
     }
-    
+
     @Override
     @Transactional
     public void updateLastLogin(UUID userId) {
@@ -130,4 +99,5 @@ public class UserServiceImpl implements UserService {
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
     }
+    
 }

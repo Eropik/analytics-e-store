@@ -690,15 +690,15 @@ public class AnalyzeRepository {
                 AND (
                     CASE 
                         WHEN cp.dateOfBirth IS NULL THEN 'Unknown'
-                        WHEN EXTRACT(YEAR FROM AGE(cp.dateOfBirth)) < 18 THEN '0-17'
-                        WHEN EXTRACT(YEAR FROM AGE(cp.dateOfBirth)) BETWEEN 18 AND 24 THEN '18-24'
-                        WHEN EXTRACT(YEAR FROM AGE(cp.dateOfBirth)) BETWEEN 25 AND 29 THEN '25-29'
-                        WHEN EXTRACT(YEAR FROM AGE(cp.dateOfBirth)) BETWEEN 30 AND 34 THEN '30-34'
-                        WHEN EXTRACT(YEAR FROM AGE(cp.dateOfBirth)) BETWEEN 35 AND 39 THEN '35-39'
-                        WHEN EXTRACT(YEAR FROM AGE(cp.dateOfBirth)) BETWEEN 40 AND 44 THEN '40-44'
-                        WHEN EXTRACT(YEAR FROM AGE(cp.dateOfBirth)) BETWEEN 45 AND 49 THEN '45-49'
-                        WHEN EXTRACT(YEAR FROM AGE(cp.dateOfBirth)) BETWEEN 50 AND 54 THEN '50-54'
-                        WHEN EXTRACT(YEAR FROM AGE(cp.dateOfBirth)) BETWEEN 55 AND 59 THEN '55-59'
+                        WHEN (YEAR(CURRENT_DATE) - YEAR(cp.dateOfBirth)) < 18 THEN '0-17'
+                        WHEN (YEAR(CURRENT_DATE) - YEAR(cp.dateOfBirth)) BETWEEN 18 AND 24 THEN '18-24'
+                        WHEN (YEAR(CURRENT_DATE) - YEAR(cp.dateOfBirth)) BETWEEN 25 AND 29 THEN '25-29'
+                        WHEN (YEAR(CURRENT_DATE) - YEAR(cp.dateOfBirth)) BETWEEN 30 AND 34 THEN '30-34'
+                        WHEN (YEAR(CURRENT_DATE) - YEAR(cp.dateOfBirth)) BETWEEN 35 AND 39 THEN '35-39'
+                        WHEN (YEAR(CURRENT_DATE) - YEAR(cp.dateOfBirth)) BETWEEN 40 AND 44 THEN '40-44'
+                        WHEN (YEAR(CURRENT_DATE) - YEAR(cp.dateOfBirth)) BETWEEN 45 AND 49 THEN '45-49'
+                        WHEN (YEAR(CURRENT_DATE) - YEAR(cp.dateOfBirth)) BETWEEN 50 AND 54 THEN '50-54'
+                        WHEN (YEAR(CURRENT_DATE) - YEAR(cp.dateOfBirth)) BETWEEN 55 AND 59 THEN '55-59'
                         ELSE '60+'
                     END = :ageGroup
                 )
@@ -841,6 +841,7 @@ public class AnalyzeRepository {
         List<TimeSeriesItemDto> executionSeries = new ArrayList<>();
         List<TimeSeriesItemDto> sigmaSeries = new ArrayList<>();
         List<TimeSeriesItemDto> variationSeries = new ArrayList<>();
+        BigDecimal cumulativeSum = BigDecimal.ZERO;
 
         for (int i = 0; i < months.size(); i++) {
             String month = months.get(i);
@@ -850,6 +851,22 @@ public class AnalyzeRepository {
                     ? BigDecimal.ZERO
                     : actual.divide(planned, 6, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP);
 
+            cumulativeSum = cumulativeSum.add(actual);
+            int sampleSize = i + 1;
+            BigDecimal cumulativeAvg = cumulativeSum.divide(BigDecimal.valueOf(sampleSize), 10, RoundingMode.HALF_UP);
+            BigDecimal cumulativeVarianceSum = BigDecimal.ZERO;
+            for (int j = 0; j <= i; j++) {
+                BigDecimal deviation = actualValues.get(j).subtract(cumulativeAvg);
+                cumulativeVarianceSum = cumulativeVarianceSum.add(deviation.multiply(deviation));
+            }
+            BigDecimal cumulativeVariance = cumulativeVarianceSum.divide(BigDecimal.valueOf(sampleSize), 10, RoundingMode.HALF_UP);
+            BigDecimal cumulativeSigma = BigDecimal.valueOf(Math.sqrt(cumulativeVariance.doubleValue())).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal cumulativeVariation = cumulativeAvg.compareTo(BigDecimal.ZERO) == 0
+                    ? BigDecimal.ZERO
+                    : cumulativeSigma.divide(cumulativeAvg, 10, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .setScale(2, RoundingMode.HALF_UP);
+
             TurnoverPlanRowDto row = new TurnoverPlanRowDto();
             row.setMonth(month);
             row.setActualTurnover(actual.setScale(2, RoundingMode.HALF_UP));
@@ -857,6 +874,8 @@ public class AnalyzeRepository {
             row.setPlanExecutionPercent(execution);
             row.setSigma(sigma);
             row.setVariationPercent(variation);
+            row.setCumulativeSigma(cumulativeSigma);
+            row.setCumulativeVariationPercent(cumulativeVariation);
             reportRows.add(row);
 
             TimeSeriesItemDto execTs = new TimeSeriesItemDto();
@@ -866,12 +885,12 @@ public class AnalyzeRepository {
 
             TimeSeriesItemDto sigmaTs = new TimeSeriesItemDto();
             sigmaTs.setLabel(month);
-            sigmaTs.setValue(sigma);
+            sigmaTs.setValue(cumulativeSigma);
             sigmaSeries.add(sigmaTs);
 
             TimeSeriesItemDto varTs = new TimeSeriesItemDto();
             varTs.setLabel(month);
-            varTs.setValue(variation);
+            varTs.setValue(cumulativeVariation);
             variationSeries.add(varTs);
         }
 

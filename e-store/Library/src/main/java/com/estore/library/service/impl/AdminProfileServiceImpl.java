@@ -94,6 +94,24 @@ public class AdminProfileServiceImpl implements AdminProfileService {
         return adminProfileRepository.findAllOrderByHireDateAsc();
     }
 
+    @Transactional
+    @Override
+    public AdminProfile patchAdminPersonalFields(UUID userId, String firstName, String lastName, String profilePictureUrl) {
+        AdminProfile profile = adminProfileRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Admin profile not found for user: " + userId));
+
+        if (firstName != null) {
+            profile.setFirstName(firstName.trim());
+        }
+        if (lastName != null) {
+            profile.setLastName(lastName.trim());
+        }
+        if (profilePictureUrl != null) {
+            profile.setProfilePictureUrl(profilePictureUrl.trim());
+        }
+        return adminProfileRepository.save(profile);
+    }
+
     // ===================================
     // ЛОГИКА АВТОРИЗАЦИИ (Исправлена)
     // ===================================

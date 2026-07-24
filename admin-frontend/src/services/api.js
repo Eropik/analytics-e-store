@@ -31,8 +31,20 @@ export const userService = {
 
   deactivate: (id, adminUserId) =>
     api.put(`/users/${id}/deactivate?adminUserId=${adminUserId}`),
-  
-  create: (data, adminUserId) => 
+
+  /** Личный кабинет: только свой userId = adminUserId */
+  patchMyAdminProfile: (userId, adminUserId, payload) =>
+    api.patch(`/users/${userId}/my-admin-profile?adminUserId=${adminUserId}`, payload),
+
+  uploadMyAdminProfilePhoto: (userId, adminUserId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/users/${userId}/my-admin-profile-photo?adminUserId=${adminUserId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  create: (data, adminUserId) =>
     api.post(`/users?adminUserId=${adminUserId}`, data),
   
   update: (id, data, adminUserId) => 

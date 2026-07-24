@@ -55,6 +55,7 @@ function Cart() {
     return (
       <div className="cart">
         <h1>Корзина пуста</h1>
+        <button className="go-catalog-btn" onClick={() => navigate('/')}>Перейти в каталог товаров</button>
       </div>
     );
   }
@@ -68,9 +69,9 @@ function Cart() {
             <img src={item.product?.mainImageUrl || '/placeholder.png'} alt={item.product?.name} />
             <div className="item-info">
               <h3>{item.product?.name}</h3>
-              <p>Цена: {item.unitPrice} ₽</p>
+              <p>Цена: {item.unitPrice} р.</p>
               <p>Количество: {item.quantity}</p>
-              <p>Итого: {(item.unitPrice || 0) * (item.quantity || 0)} ₽</p>
+              <p>Итого: {(item.unitPrice || 0) * (item.quantity || 0)} р.</p>
               <button 
                 className="remove-btn" 
                 onClick={() => handleRemoveItem(item.product?.productId)}
@@ -82,7 +83,7 @@ function Cart() {
         ))}
       </div>
       <div className="cart-total">
-        <h2>Итого: {cart.totalAmount || 0} ₽</h2>
+        <h2>Итого: {cart.totalAmount || 0} р.</h2>
         <button onClick={handleCheckout}>Оформить заказ</button>
       </div>
     </div>

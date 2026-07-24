@@ -11,6 +11,7 @@ import com.estore.library.service.AdminProfileService;
 import com.estore.library.service.UserService;
 import com.estore.library.service.CustomerProfileService;
 import com.estore.library.service.RoleService;
+import com.estore.library.utils.ImageUpload;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -38,9 +40,26 @@ public class UserManagementController {
     private final UserService userService;
     private final CustomerProfileService customerProfileService;
     private final RoleService roleService;
+    private final ImageUpload imageUpload;
     
     private boolean checkAccess(UUID adminUserId) {
         return adminProfileService.hasUserManagementAccess(adminUserId);
+    }
+
+    /**
+     * Личный кабинет: любой активный администратор с AdminProfile может работать только со своим userId.
+     * Не привязано к отделу USER_MANAGE.
+     */
+    private boolean canSelfServiceOwnProfile(UUID adminUserId, UUID targetUserId) {
+        if (!Objects.equals(adminUserId, targetUserId)) {
+            return false;
+        }
+        if (adminProfileService.getProfileById(adminUserId).isEmpty()) {
+            return false;
+        }
+        return userService.getUserById(adminUserId)
+                .map(User::getIsActive)
+                .orElse(false);
     }
     
     /**
@@ -123,7 +142,7 @@ public class UserManagementController {
             @PathVariable UUID userId) {
 
         try {
-            if (!checkAccess(adminUserId)) {
+            if (!checkAccess(adminUserId) && !canSelfServiceOwnProfile(adminUserId, userId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Access denied. USER_MANAGE department required"));
             }
@@ -398,9 +417,94 @@ public class UserManagementController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Access denied"));
             }
-            
+
             return ResponseEntity.ok(roleService.getAllRoles());
-            
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Личный кабинет: обновление только своего профиля администратора (ФИО, URL фото).
+     * PATCH /api/admin/users/{userId}/my-admin-profile?adminUserId=...
+     */
+    @PatchMapping("/{userId}/my-admin-profile")
+    public ResponseEntity<?> patchMyAdminProfile(
+            @RequestParam UUID adminUserId,
+            @PathVariable UUID userId,
+            @RequestBody(required = false) Map<String, String> body
+    ) {
+        try {
+            if (!canSelfServiceOwnProfile(adminUserId, userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Нет доступа к редактированию профиля (только свой активный админ-аккаунт)"));
+            }
+            Map<String, String> b = body != null ? body : Map.of();
+            String firstName = b.containsKey("firstName") ? b.get("firstName") : null;
+            String lastName = b.containsKey("lastName") ? b.get("lastName") : null;
+            String profilePictureUrl = b.containsKey("profilePictureUrl") ? b.get("profilePictureUrl") : null;
+
+            adminProfileService.patchAdminPersonalFields(userId, firstName, lastName, profilePictureUrl);
+            AdminProfile refreshed = adminProfileService.getProfileById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("Admin profile not found"));
+
+            AdminProfileDto profileDto = new AdminProfileDto();
+            profileDto.setUserId(refreshed.getUserId());
+            profileDto.setFirstName(refreshed.getFirstName());
+            profileDto.setLastName(refreshed.getLastName());
+            profileDto.setHireDate(refreshed.getHireDate());
+            profileDto.setProfilePictureUrl(refreshed.getProfilePictureUrl());
+            if (refreshed.getDepartment() != null) {
+                profileDto.setDepartmentId(refreshed.getDepartment().getDepartmentId());
+                profileDto.setDepartmentName(refreshed.getDepartment().getDepartmentName());
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Профиль обновлён",
+                    "adminProfile", profileDto
+            ));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Загрузить фото профиля (только свой userId). Возвращает публичный imageUrl для сохранения через PATCH.
+     * POST /api/admin/users/{userId}/my-admin-profile-photo?adminUserId=...
+     */
+    @PostMapping("/{userId}/my-admin-profile-photo")
+    public ResponseEntity<?> uploadMyAdminProfilePhoto(
+            @RequestParam UUID adminUserId,
+            @PathVariable UUID userId,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            if (!canSelfServiceOwnProfile(adminUserId, userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Нет доступа к загрузке фото (только свой активный админ-аккаунт)"));
+            }
+            if (file == null || file.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Файл не передан"));
+            }
+            if (!adminProfileService.getProfileById(userId).isPresent()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Профиль администратора не найден"));
+            }
+            String imageUrl = imageUpload.uploadFileAndGetUrl(file);
+            if (imageUrl == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Не удалось сохранить файл"));
+            }
+            adminProfileService.patchAdminPersonalFields(userId, null, null, imageUrl);
+            return ResponseEntity.ok(Map.of("success", true, "imageUrl", imageUrl));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
@@ -415,21 +519,39 @@ public class UserManagementController {
         dto.setEmail(user.getEmail());
         dto.setIsActive(user.getIsActive());
 
-        // Роль (EAGER)
         if (user.getRole() != null) {
             dto.setRoleId(user.getRole().getRoleId());
             dto.setRoleName(user.getRole().getRoleName());
         }
 
-
         if (user.getCustomerProfile() != null && user.getCustomerProfile().getUserId() != null) {
-            dto.setProfileId(user.getCustomerProfile().getUserId());
+            CustomerProfile cpEntity = user.getCustomerProfile();
+            dto.setProfileId(cpEntity.getUserId());
             dto.setProfileType("CUSTOMER");
-        } else if (user.getAdminProfile() != null && user.getAdminProfile().getUserId() != null) {
-            dto.setProfileId(user.getAdminProfile().getUserId());
-            dto.setProfileType("ADMIN");
-        }
 
+            CustomerProfileDto cp = new CustomerProfileDto();
+            cp.setUserId(cpEntity.getUserId());
+            cp.setFirstName(cpEntity.getFirstName());
+            cp.setLastName(cpEntity.getLastName());
+            cp.setProfilePictureUrl(cpEntity.getProfilePictureUrl());
+            dto.setCustomerProfile(cp);
+        } else if (user.getAdminProfile() != null && user.getAdminProfile().getUserId() != null) {
+            AdminProfile apEntity = user.getAdminProfile();
+            dto.setProfileId(apEntity.getUserId());
+            dto.setProfileType("ADMIN");
+
+            AdminProfileDto ap = new AdminProfileDto();
+            ap.setUserId(apEntity.getUserId());
+            ap.setFirstName(apEntity.getFirstName());
+            ap.setLastName(apEntity.getLastName());
+            ap.setHireDate(apEntity.getHireDate());
+            ap.setProfilePictureUrl(apEntity.getProfilePictureUrl());
+            if (apEntity.getDepartment() != null) {
+                ap.setDepartmentId(apEntity.getDepartment().getDepartmentId());
+                ap.setDepartmentName(apEntity.getDepartment().getDepartmentName());
+            }
+            dto.setAdminProfile(ap);
+        }
 
         return dto;
     }

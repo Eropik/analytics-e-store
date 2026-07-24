@@ -14,6 +14,16 @@
   color: #d0e8f0;
 }
 
+.go-catalog-btn {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  background: linear-gradient(135deg, #5f81ba, #77a7dc);
+  cursor: pointer;
+}
+
 .cart-items {
   margin-bottom: 30px;
 }

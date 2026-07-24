@@ -8,6 +8,8 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.12.2",
+    "browserslist": "^4.28.2",
+    "caniuse-lite": "^1.0.30001792",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.4",
@@ -15,7 +17,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "set PORT=3000&&set REACT_APP_API_BASE=http://localhost:8020/api&&react-scripts start",
+    "start": "set PORT=3000&&set REACT_APP_API_BASE=http://localhost:8020/api&&set NODE_OPTIONS=--no-deprecation&&react-scripts start",
     "build": "set REACT_APP_API_BASE=http://localhost:8020/api&&react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -37,5 +39,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "baseline-browser-mapping": "^2.10.29"
   }
 }

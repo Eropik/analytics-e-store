@@ -16,9 +16,11 @@ import java.util.UUID;
 public interface ProductImageRepository extends JpaRepository<ProductImage, Integer> {
     
     @Query("SELECT pi FROM ProductImage pi WHERE pi.product.productId = :productId ORDER BY pi.sortOrder ASC")
+    @Transactional
     List<ProductImage> findByProductIdOrderBySortOrder(@Param("productId") UUID productId);
     
     @Query("SELECT pi FROM ProductImage pi WHERE pi.product.productId = :productId")
+    @Transactional
     List<ProductImage> findByProductId(@Param("productId") UUID productId);
     
     @Modifying
@@ -29,8 +31,10 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Inte
     Long countByProductId(@Param("productId") UUID productId);
 
 
- @Query("SELECT i FROM ProductImage i WHERE i.product.productId = :productId ORDER BY i.sortOrder ASC LIMIT 1")
- Optional<ProductImage> findFirstByProductIdOrderBySortOrder(@Param("productId") UUID productId);
+
+    @Query("SELECT i FROM ProductImage i WHERE i.product.productId = :productId ORDER BY i.sortOrder ASC LIMIT 1")
+    @Transactional
+    Optional<ProductImage> findFirstByProductIdOrderBySortOrder(@Param("productId") UUID productId);
 
     @Transactional        // Удаляющие операции через deleteBy* должны быть транзакционными
     long deleteByProductProductIdAndImageId(UUID productId, Integer imageId);

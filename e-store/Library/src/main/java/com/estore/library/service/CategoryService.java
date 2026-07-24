@@ -15,8 +15,6 @@ public interface CategoryService {
     
     Optional<Category> getCategoryById(Integer categoryId);
     
-    Optional<Category> getCategoryByName(String categoryName);
-    
     List<Category> getAllCategories();
     
     List<Category> searchCategories(String search);

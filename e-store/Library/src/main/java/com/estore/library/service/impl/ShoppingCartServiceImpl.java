@@ -28,9 +28,8 @@ public class ShoppingCartServiceImpl implements com.estore.library.service.Shopp
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     
-    @Override
     @Transactional
-    public ShoppingCart createCart(UUID userId) {
+    private ShoppingCart createCart(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
         
@@ -47,11 +46,6 @@ public class ShoppingCartServiceImpl implements com.estore.library.service.Shopp
     }
     
     @Override
-    public Optional<ShoppingCart> getCartById(UUID cartId) {
-        return shoppingCartRepository.findById(cartId);
-    }
-    
-    @Override
     public Optional<ShoppingCart> getCartByUserId(UUID userId) {
         return shoppingCartRepository.findByUserId(userId);
     }
@@ -59,15 +53,6 @@ public class ShoppingCartServiceImpl implements com.estore.library.service.Shopp
     @Override
     public Optional<ShoppingCart> getCartWithItems(UUID userId) {
         return shoppingCartRepository.findByUserIdWithItems(userId);
-    }
-    
-    @Override
-    @Transactional
-    public void deleteCart(UUID cartId) {
-        if (!shoppingCartRepository.existsById(cartId)) {
-            throw new IllegalArgumentException("Cart not found with id: " + cartId);
-        }
-        shoppingCartRepository.deleteById(cartId);
     }
     
     @Override
@@ -115,7 +100,11 @@ public class ShoppingCartServiceImpl implements com.estore.library.service.Shopp
         
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
-            item.setQuantity(item.getQuantity() + quantity);
+            int requestedTotal = item.getQuantity() + quantity;
+            if (product.getStockQuantity() < requestedTotal) {
+                throw new IllegalStateException("Insufficient stock for product: " + productId);
+            }
+            item.setQuantity(requestedTotal);
             item.setUnitPrice(unitPrice);
             cartItemRepository.save(item);
         } else {
@@ -168,9 +157,8 @@ public class ShoppingCartServiceImpl implements com.estore.library.service.Shopp
         shoppingCartRepository.save(cart);
     }
     
-    @Override
     @Transactional
-    public ShoppingCart getOrCreateCart(UUID userId) {
+    private ShoppingCart getOrCreateCart(UUID userId) {
         return shoppingCartRepository.findByUserId(userId)
                 .orElseGet(() -> createCart(userId));
     }

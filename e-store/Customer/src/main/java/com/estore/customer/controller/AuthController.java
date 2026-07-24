@@ -1,5 +1,5 @@
 package com.estore.customer.controller;
-
+import java.time.LocalDate;
 import com.estore.library.model.bisentity.CustomerProfile;
 import com.estore.library.model.bisentity.User;
 import com.estore.library.model.dicts.Role;
@@ -66,9 +66,9 @@ public class AuthController {
 
             // Устанавливаем двустороннюю связь
             profile.setUser(createdUser);
-            // createdUser.setCustomerProfile(profile); // Эта строка не нужна для сохранения профиля, но хороша для целостности.
-            // Мы сделаем сохранение профиля явно.
-
+            if (request.getDateOfBirth() != null) {
+                profile.setDateOfBirth(request.getDateOfBirth());
+            }
             profile.setFirstName(request.getFirstName());
             profile.setLastName(request.getLastName());
             profile.setPhoneNumber(request.getPhoneNumber());
@@ -170,12 +170,15 @@ public class AuthController {
     
     // DTO классы
     public static class RegisterRequest {
+
         private String email;
         private String password;
         private String firstName;
         private String lastName;
         private String phoneNumber;
-        
+        private LocalDate dateOfBirth;
+        public LocalDate getDateOfBirth() { return dateOfBirth; }
+        public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
         

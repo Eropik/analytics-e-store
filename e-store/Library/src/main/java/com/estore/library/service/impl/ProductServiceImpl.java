@@ -58,6 +58,7 @@ public class ProductServiceImpl implements ProductService {
         
         return productRepository.save(existingProduct);
     }
+
     @Override
     @Transactional
     public Product createProductWithImages(ProductCreateRequest request) {
@@ -123,11 +124,13 @@ public class ProductServiceImpl implements ProductService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Optional<Product> getProductById(UUID productId) {
         return productRepository.findById(productId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getAllProducts(Pageable pageable) {
 
         //todo check repo there is some logics with FETCH for name of category and brand
@@ -135,11 +138,13 @@ public class ProductServiceImpl implements ProductService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getAvailableProducts(Pageable pageable) {
         return productRepository.findByIsAvailable(true, pageable);
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getProductsByCategory(Integer categoryId, Pageable pageable) {
         return productRepository.findByCategoryId(categoryId, pageable);
     }
@@ -150,16 +155,19 @@ public class ProductServiceImpl implements ProductService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getProductsByPriceRange(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
         return productRepository.findByPriceRange(minPrice, maxPrice, pageable);
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> searchProducts(String search, Pageable pageable) {
         return productRepository.searchByNameOrDescription(search, pageable);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> searchProductsAdvanced(UUID productId,
                                                 Integer categoryId,
                                                 Integer brandId,
@@ -171,31 +179,37 @@ public class ProductServiceImpl implements ProductService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getProductsByMinRating(BigDecimal minRating, Pageable pageable) {
         return productRepository.findByMinRating(minRating, pageable);
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getInStockProducts(Pageable pageable) {
         return productRepository.findInStock(pageable);
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getLowStockProducts(Integer threshold, Pageable pageable) {
         return productRepository.findLowStock(threshold, pageable);
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getTopRatedProducts(Pageable pageable) {
         return productRepository.findTopRated(pageable);
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getNewestProducts(Pageable pageable) {
         return productRepository.findNewest(pageable);
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<Product> getProductsByCategoryAndBrand(Integer categoryId, Integer brandId, Pageable pageable) {
         return productRepository.findByCategoryAndBrand(categoryId, brandId, pageable);
     }

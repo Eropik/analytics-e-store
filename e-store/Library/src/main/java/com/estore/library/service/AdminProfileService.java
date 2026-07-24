@@ -42,4 +42,10 @@ public interface AdminProfileService {
     
     List<AdminProfile> getAllOrderedByHireDate();
 
+    /**
+     * Частичное обновление личных полей профиля администратора (имя, фото).
+     * Не затрагивает отдел и дату найма (updateProfile сохранён для админ-сценариев).
+     */
+    AdminProfile patchAdminPersonalFields(UUID userId, String firstName, String lastName, String profilePictureUrl);
+
 }

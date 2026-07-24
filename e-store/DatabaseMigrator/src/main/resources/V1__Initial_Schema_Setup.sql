@@ -229,7 +229,6 @@ CREATE TRIGGER trg_update_customer_spent
     EXECUTE FUNCTION update_customer_spent();
 --------------------------------------------------------------
 -- Запрос BFS (Поиск в Ширину)
--- Выполняется с помощью рекурсивного CTE
 WITH RECURSIVE bfs_search AS (
     SELECT
         c.city_id,

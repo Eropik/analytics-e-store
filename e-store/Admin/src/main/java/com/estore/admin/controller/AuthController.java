@@ -15,7 +15,6 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/admin/auth")
 @RequiredArgsConstructor
-//@CrossOrigin(origins = "*")
 @CrossOrigin(origins = {"http://localhost:3001", "null"})
 public class AuthController {
     
@@ -38,16 +37,12 @@ public class AuthController {
             }
             
             User user = userOpt.get();
-            
-            // Проверка пароля (храним в БД как есть, без encoder)
+
             if (!Objects.equals(request.getPassword(), user.getPasswordHash())) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "Invalid credentials"));
             }
 
-
-            
-            // Проверка роли Admin
             String roleName = user.getRole().getRoleName();
             String normalizedRole = roleName.toUpperCase().replaceFirst("^ROLE_", "");
             if (!"ADMIN".equals(normalizedRole)) {
@@ -119,7 +114,7 @@ public class AuthController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-    
+
     // DTO
     public static class LoginRequest {
         private String email;

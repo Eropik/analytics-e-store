@@ -179,6 +179,9 @@
   color: #333;
   transition: transform 0.2s, box-shadow 0.2s;
   background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .product-card:hover {
@@ -199,7 +202,7 @@
 
 .product-card img {
   width: 100%;
-  height: 200px;
+  height: 160px;
   object-fit: cover;
   border-radius: 4px;
 }
@@ -238,6 +241,26 @@
   color: #d0e8f0;
   text-align: center;
   padding: 20px;
+}
+
+.empty-products {
+  padding: 20px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2b3f63;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.empty-products button {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #fff;
+  background: linear-gradient(135deg, #5f81ba, #77a7dc);
+  cursor: pointer;
 }
 
 

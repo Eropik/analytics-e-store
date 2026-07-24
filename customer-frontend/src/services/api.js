@@ -10,9 +10,11 @@ const api = axios.create({
   },
 });
 
+
 export const authService = {
   login: (data) => api.post('/auth/login', data),
   register: (data) => api.post('/auth/register', data),
+  logout: () => api.post('/auth/logout'),
   checkEmail: (email) => api.get(`/auth/check-email?email=${encodeURIComponent(email)}`),
 };
 
@@ -67,6 +69,9 @@ export const orderService = {
     api.post(`/customer/orders/${orderId}/cancel?userId=${userId}`),
 
   getById: (orderId) => api.get(`/customer/orders/${orderId}`),
+
+  getNearestWarehouse: (cityId) =>
+    api.get('/customer/orders/nearest-warehouse', { params: { cityId } }),
 };
 
 export const profileService = {

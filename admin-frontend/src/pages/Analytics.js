@@ -1,11 +1,11 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { analyticsService } from '../services/api';
 import './Analytics.css';
 import {
   PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  LineChart, Line, ResponsiveContainer
+  LineChart, Line, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 import { formatAccessDenied, translateGender, translateOrderStatus } from '../utils/enumTranslations';
 import * as XLSX from 'xlsx';
@@ -18,6 +18,22 @@ const Section = ({ title, children }) => (
     {children}
   </details>
 );
+
+/** Должен совпадать с CASE в AnalyzeRepository для фильтров и analyzeGeneric */
+const AGE_BUCKET_OPTIONS = [
+  { value: '', label: 'Любой возрастной интервал' },
+  { value: 'Unknown', label: 'Неизвестно' },
+  { value: '0-17', label: '0–17 лет' },
+  { value: '18-24', label: '18–24 года' },
+  { value: '25-29', label: '25–29 лет' },
+  { value: '30-34', label: '30–34 лет' },
+  { value: '35-39', label: '35–39 лет' },
+  { value: '40-44', label: '40–44 лет' },
+  { value: '45-49', label: '45–49 лет' },
+  { value: '50-54', label: '50–54 лет' },
+  { value: '55-59', label: '55–59 лет' },
+  { value: '60+', label: '60+ лет' },
+];
 
 function Analytics() {
   const palette = ['#3498db', '#e67e22', '#9b59b6', '#16a085', '#e74c3c', '#f1c40f', '#2ecc71', '#34495e'];
@@ -59,10 +75,10 @@ function Analytics() {
   const [orderFilter, setOrderFilter] = useState({
     status: '',
     gender: '',
-    ageGroup: '',
-    categoryId: '',
-    brandId: ''
+    ageGroup: ''
   });
+  const [groupHoverLineKey, setGroupHoverLineKey] = useState(null);
+  const [turnoverTrendHoverSeries, setTurnoverTrendHoverSeries] = useState(null);
   const navigate = useNavigate();
   const adminUserId = localStorage.getItem('adminUserId');
   const department = localStorage.getItem('adminDepartment') || '';
@@ -77,14 +93,6 @@ function Analytics() {
     ...(canAnalyze ? ['analyze'] : []),
   ];
   const [activeTab, setActiveTab] = useState(availableTabs[0] || '');
-
-  useEffect(() => {
-    if (!adminUserId) {
-      navigate('/login');
-      return;
-    }
-    loadAnalytics();
-  }, [adminUserId, navigate, canProduct, canOrder, canUser, canAnalyze]);
 
   const plannedMonths = useMemo(() => {
     if (!turnoverForm.startMonth || !turnoverForm.endMonth) return [];
@@ -108,7 +116,50 @@ function Analytics() {
     });
   }, [plannedMonths]);
 
-  const loadAnalytics = async () => {
+  useEffect(() => {
+    setTurnoverReport(null);
+    setTurnoverError('');
+  }, [turnoverForm.metric, turnoverForm.startMonth, turnoverForm.endMonth, turnoverForm.plannedValues]);
+
+  const loadAnalyze = useCallback(async (filters) => {
+    try {
+      let monthNum;
+      const m = filters.month;
+      if (m !== '' && m != null && String(m).trim() !== '') {
+        const n = Number(m);
+        if (Number.isInteger(n) && n >= 1 && n <= 12) monthNum = n;
+      }
+      const res = await analyticsService.analyzeGeneric(adminUserId, {
+        scope: filters.scope,
+        gender: filters.gender || undefined,
+        ageGroup: filters.ageGroup || undefined,
+        month: monthNum
+      });
+      setAnalyzeData(res.data.result || []);
+      setAnalyzeError('');
+    } catch (e) {
+      console.error('Error analyze', e);
+      setAnalyzeData([]);
+      setAnalyzeError(formatAccessDenied(e.response?.data?.error || 'Нет доступа: требуется ANALYZE'));
+    }
+  }, [adminUserId]);
+
+  const loadOrderFilter = useCallback(async (filters) => {
+    try {
+      const res = await analyticsService.orderFilter(adminUserId, {
+        status: filters.status || undefined,
+        gender: filters.gender || undefined,
+        ageGroup: filters.ageGroup || undefined,
+      });
+      setOrderData((prev) => ({ ...prev, filtered: res.data }));
+    } catch (e) {
+      console.error('Error order filter', e);
+      setOrderData((prev) => ({ ...prev, filtered: { brands: [], categories: [], products: [] } }));
+      setOrderError(formatAccessDenied(e.response?.data?.error || 'Нет доступа: требуется ORDER_MANAGE или ANALYZE'));
+    }
+  }, [adminUserId]);
+
+  const loadOverviewAnalytics = useCallback(async () => {
     setLoading(true);
     setProductError('');
     setUserError('');
@@ -144,8 +195,12 @@ function Analytics() {
     if (canOrder) {
       tasks.push(
         analyticsService.orderOverview(adminUserId)
-          .then(res => setOrderData(res.data || {}))
-          .then(() => loadOrderFilter(orderFilter))
+          .then(res =>
+            setOrderData((prev) => ({
+              ...(res.data || {}),
+              ...(prev.filtered != null ? { filtered: prev.filtered } : {})
+            }))
+          )
           .catch(err => {
             console.error('Order analytics error', err);
             setOrderData({});
@@ -154,46 +209,52 @@ function Analytics() {
       );
     }
 
-    if (canAnalyze) {
-      tasks.push(loadAnalyze(analyzeFilters).catch(() => {}));
-    }
-
     Promise.all(tasks).finally(() => setLoading(false));
-  };
+  }, [
+    adminUserId,
+    canProduct,
+    canUser,
+    canOrder,
+  ]);
 
-  const loadAnalyze = async (filters) => {
-    try {
-      const res = await analyticsService.analyzeGeneric(adminUserId, {
-        scope: filters.scope,
-        gender: filters.gender || undefined,
-        ageGroup: filters.ageGroup || undefined,
-        month: filters.month || undefined
-      });
-      setAnalyzeData(res.data.result || []);
-      setAnalyzeError('');
-    } catch (e) {
-      console.error('Error analyze', e);
-      setAnalyzeData([]);
-      setAnalyzeError(formatAccessDenied(e.response?.data?.error || 'Нет доступа: требуется ANALYZE'));
-    }
-  };
+  useEffect(() => {
+    if (!adminUserId || !canOrder) return undefined;
+    const snapshot = {
+      status: orderFilter.status,
+      gender: orderFilter.gender,
+      ageGroup: orderFilter.ageGroup,
+    };
+    const t = window.setTimeout(() => loadOrderFilter(snapshot), 400);
+    return () => window.clearTimeout(t);
+  }, [adminUserId, canOrder, orderFilter.status, orderFilter.gender, orderFilter.ageGroup, loadOrderFilter]);
 
-  const loadOrderFilter = async (filters) => {
-    try {
-      const res = await analyticsService.orderFilter(adminUserId, {
-        status: filters.status || undefined,
-        gender: filters.gender || undefined,
-        ageGroup: filters.ageGroup || undefined,
-        categoryId: filters.categoryId || undefined,
-        brandId: filters.brandId || undefined,
-      });
-      setOrderData((prev) => ({ ...prev, filtered: res.data }));
-    } catch (e) {
-      console.error('Error order filter', e);
-      setOrderData((prev) => ({ ...prev, filtered: { brands: [], categories: [], products: [] } }));
-      setOrderError(formatAccessDenied(e.response?.data?.error || 'Нет доступа: требуется ORDER_MANAGE или ANALYZE'));
+  useEffect(() => {
+    if (!adminUserId || !canAnalyze) return undefined;
+    const snapshot = {
+      scope: analyzeFilters.scope,
+      gender: analyzeFilters.gender,
+      ageGroup: analyzeFilters.ageGroup,
+      month: analyzeFilters.month,
+    };
+    const t = window.setTimeout(() => loadAnalyze(snapshot), 400);
+    return () => window.clearTimeout(t);
+  }, [
+    adminUserId,
+    canAnalyze,
+    analyzeFilters.scope,
+    analyzeFilters.gender,
+    analyzeFilters.ageGroup,
+    analyzeFilters.month,
+    loadAnalyze,
+  ]);
+
+  useEffect(() => {
+    if (!adminUserId) {
+      navigate('/login');
+      return;
     }
-  };
+    loadOverviewAnalytics();
+  }, [adminUserId, navigate, loadOverviewAnalytics]);
 
   const normalizePieData = (data, isFull) => {
     const list = Array.isArray(data) ? data : [];
@@ -251,15 +312,60 @@ function Analytics() {
     </div>
   );
 
-  const renderTimeSeries = (data) => (
+  const renderTimeSeries = (data, hoverKey = 'time-series-single') => (
     <div className="chart-box">
       <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={data || []}>
+        <LineChart
+          data={data || []}
+          onMouseLeave={() => setTurnoverTrendHoverSeries((k) => (k === hoverKey ? null : k))}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="label" />
           <YAxis />
           <Tooltip />
-          <Line type="monotone" dataKey="value" stroke={palette[1]} />
+          <Line
+            type="monotone"
+            dataKey="value"
+            stroke={palette[1]}
+            strokeWidth={turnoverTrendHoverSeries === hoverKey ? 3.2 : 2}
+            dot={false}
+            activeDot={{ r: 6 }}
+            onMouseEnter={() => setTurnoverTrendHoverSeries(hoverKey)}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
+  const renderTurnoverTrend = ({ chartId, data, dataKey, valueName, absValue, absLabel, yAxisLabel }) => (
+    <div className="chart-box">
+      <ResponsiveContainer width="100%" height={280}>
+        <LineChart
+          data={data || []}
+          onMouseLeave={() => setTurnoverTrendHoverSeries((k) => (k === chartId ? null : k))}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="label" />
+          <YAxis label={{ value: yAxisLabel, angle: -90, position: 'insideLeft' }} />
+          <Tooltip />
+          <Legend />
+          <Line
+            type="monotone"
+            dataKey={dataKey}
+            name={valueName}
+            stroke={palette[1]}
+            strokeWidth={turnoverTrendHoverSeries === chartId ? 3.5 : 2}
+            dot={false}
+            activeDot={{ r: 6 }}
+            onMouseEnter={() => setTurnoverTrendHoverSeries(chartId)}
+          />
+          <ReferenceLine
+            y={absValue}
+            name={absLabel}
+            stroke={palette[4]}
+            strokeDasharray="6 4"
+            ifOverflow="extendDomain"
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -333,6 +439,114 @@ function Analytics() {
     return Object.keys(first).filter((k) => k !== 'month');
   }, [groupReport]);
 
+  const toSafeNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const computeSigma = (values) => {
+    if (!values.length) return 0;
+    const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+    const variance = values.reduce((sum, v) => {
+      const diff = v - mean;
+      return sum + diff * diff;
+    }, 0) / values.length;
+    return Math.sqrt(variance);
+  };
+
+  const roundForView = (value) => Number(value || 0).toFixed(2);
+
+  const turnoverCalculated = useMemo(() => {
+    const sourceRows = turnoverReport?.rows || [];
+    if (!sourceRows.length) {
+      return {
+        rows: [],
+        sigmaAbs: 0,
+        variationAbs: 0,
+      };
+    }
+
+    const actualValues = sourceRows.map((r) => toSafeNumber(r.actualTurnover));
+    const sigmaAbs = computeSigma(actualValues);
+    const avgActual = actualValues.reduce((sum, v) => sum + v, 0) / actualValues.length;
+    const variationAbs = avgActual === 0 ? 0 : (sigmaAbs / avgActual) * 100;
+
+    const rows = sourceRows.map((row, idx) => {
+      const prefix = actualValues.slice(0, idx + 1);
+      const cumulativeSigma = computeSigma(prefix);
+      const cumulativeAvg = prefix.reduce((sum, v) => sum + v, 0) / prefix.length;
+      const cumulativeVariation = cumulativeAvg === 0 ? 0 : (cumulativeSigma / cumulativeAvg) * 100;
+      return {
+        ...row,
+        cumulativeSigma,
+        cumulativeVariationPercent: cumulativeVariation,
+      };
+    });
+
+    return {
+      rows,
+      sigmaAbs,
+      variationAbs,
+    };
+  }, [turnoverReport]);
+
+  const turnoverRowsWithTotal = useMemo(() => {
+    if (!turnoverCalculated.rows.length) return [];
+    const monthRows = turnoverCalculated.rows.map((r) => ({
+      month: r.month,
+      actualTurnover: roundForView(r.actualTurnover),
+      plannedTurnover: roundForView(r.plannedTurnover),
+      planExecutionPercent: roundForView(r.planExecutionPercent),
+      cumulativeSigma: roundForView(r.cumulativeSigma),
+      cumulativeVariationPercent: roundForView(r.cumulativeVariationPercent),
+      isTotal: false,
+    }));
+
+    monthRows.push({
+      month: 'ИТОГО за период',
+      actualTurnover: roundForView(turnoverReport.totalActual),
+      plannedTurnover: roundForView(turnoverReport.totalPlanned),
+      planExecutionPercent: '',
+      cumulativeSigma: roundForView(turnoverCalculated.sigmaAbs),
+      cumulativeVariationPercent: roundForView(turnoverCalculated.variationAbs),
+      isTotal: true,
+    });
+    return monthRows;
+  }, [turnoverReport, turnoverCalculated]);
+
+  const turnoverExportRows = useMemo(
+    () => turnoverRowsWithTotal.map((r) => ({
+      month: r.month,
+      actualTurnover: r.actualTurnover,
+      plannedTurnover: r.plannedTurnover,
+      planExecutionPercent: r.planExecutionPercent,
+      cumulativeSigma: r.cumulativeSigma,
+      cumulativeVariationPercent: r.cumulativeVariationPercent,
+    })),
+    [turnoverRowsWithTotal]
+  );
+
+  const turnoverSigmaTrendData = useMemo(
+    () => turnoverCalculated.rows.map((row) => ({
+      label: row.month,
+      value: toSafeNumber(row.cumulativeSigma),
+    })),
+    [turnoverCalculated]
+  );
+
+  const turnoverVariationTrendData = useMemo(
+    () => turnoverCalculated.rows.map((row) => ({
+      label: row.month,
+      value: toSafeNumber(row.cumulativeVariationPercent),
+    })),
+    [turnoverCalculated]
+  );
+
+  const hasMissingTurnoverMonths = useMemo(
+    () => Boolean(turnoverReport?.rows?.some((r) => Number(r.actualTurnover || 0) === 0)),
+    [turnoverReport]
+  );
+
   if (loading) return <div>Загрузка...</div>;
 
   return (
@@ -341,6 +555,7 @@ function Analytics() {
 
       {canAnalyze && (
         <Section title="Анализ товарооборота (ВВПотн, σ, v)">
+          <form className="analytics-no-nav-form" onSubmit={(e) => e.preventDefault()}>
           <div className="filters">
             <select
               value={turnoverForm.metric}
@@ -386,6 +601,7 @@ function Analytics() {
               ))}
             </div>
           )}
+          </form>
           {turnoverError && <div className="error-msg">{turnoverError}</div>}
 
           {turnoverReport?.rows?.length > 0 && (
@@ -397,35 +613,40 @@ function Analytics() {
                     <th>Фактический товарооборот</th>
                     <th>Плановый товарооборот</th>
                     <th>Выполнение плана, %</th>
-                    <th>σ</th>
-                    <th>v, %</th>
+                    <th>Нарастающее σ</th>
+                    <th>Нарастающий v, %</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {turnoverReport.rows.map((r) => (
-                    <tr key={r.month}>
+                  {turnoverRowsWithTotal.map((r) => (
+                    <tr key={r.month} className={r.isTotal ? 'analytics-total-row' : ''}>
                       <td>{r.month}</td>
                       <td>{r.actualTurnover}</td>
                       <td>{r.plannedTurnover}</td>
                       <td>{r.planExecutionPercent}</td>
-                      <td>{r.sigma}</td>
-                      <td>{r.variationPercent}</td>
+                      <td>{r.cumulativeSigma}</td>
+                      <td>{r.cumulativeVariationPercent}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              {hasMissingTurnoverMonths && (
+                <div className="hint-msg">
+                  Для части месяцев фактические данные отсутствуют в БД, в расчётах использовано значение 0.
+                </div>
+              )}
               <div className="filters">
                 <button
                   type="button"
-                  onClick={() => exportRowsToExcel(turnoverReport.rows, 'turnover-plan-report')}
+                  onClick={() => exportRowsToExcel(turnoverExportRows, 'turnover-plan-report')}
                 >
                   Экспорт Excel
                 </button>
                 <button
                   type="button"
                   onClick={() => exportRowsToPdf(
-                    turnoverReport.rows,
-                    ['month', 'actualTurnover', 'plannedTurnover', 'planExecutionPercent', 'sigma', 'variationPercent'],
+                    turnoverExportRows,
+                    ['month', 'actualTurnover', 'plannedTurnover', 'planExecutionPercent', 'cumulativeSigma', 'cumulativeVariationPercent'],
                     'turnover-plan-report'
                   )}
                 >
@@ -433,11 +654,27 @@ function Analytics() {
                 </button>
               </div>
               <h4>График ВВПотн</h4>
-              {renderTimeSeries(turnoverReport.executionSeries)}
-              <h4>График среднеквадратического отклонения (σ)</h4>
-              {renderTimeSeries(turnoverReport.sigmaSeries)}
-              <h4>График коэффициента вариации (v)</h4>
-              {renderTimeSeries(turnoverReport.variationSeries)}
+              {renderTimeSeries(turnoverReport.executionSeries, 'turnover-exec')}
+              <h4>Тенденция нарастающего σ</h4>
+              {renderTurnoverTrend({
+                chartId: 'turnover-sigma',
+                data: turnoverSigmaTrendData,
+                dataKey: 'value',
+                valueName: 'Нарастающее σ',
+                absValue: toSafeNumber(turnoverCalculated.sigmaAbs),
+                absLabel: 'Итоговое σ за период',
+                yAxisLabel: turnoverReport.metric === 'volume' ? 'Ед.' : 'Рубли',
+              })}
+              <h4>Тенденция нарастающего v, %</h4>
+              {renderTurnoverTrend({
+                chartId: 'turnover-variation',
+                data: turnoverVariationTrendData,
+                dataKey: 'value',
+                valueName: 'Нарастающий v, %',
+                absValue: toSafeNumber(turnoverCalculated.variationAbs),
+                absLabel: 'Итоговое v за период',
+                yAxisLabel: '%',
+              })}
             </>
           )}
         </Section>
@@ -445,6 +682,7 @@ function Analytics() {
 
       {canAnalyze && (
         <Section title="Вес групп товаров в товарообороте (ВГР)">
+          <form className="analytics-no-nav-form" onSubmit={(e) => e.preventDefault()}>
           <div className="filters">
             <select
               value={groupForm.metric}
@@ -474,6 +712,7 @@ function Analytics() {
               {groupLoading ? 'Формируем...' : 'Сгенерировать отчет'}
             </button>
           </div>
+          </form>
           {groupError && <div className="error-msg">{groupError}</div>}
 
           {groupReport?.rows?.length > 0 && (
@@ -482,9 +721,9 @@ function Analytics() {
                 <thead>
                   <tr>
                     <th>Группа</th>
-                    <th>ТГР</th>
-                    <th>ТФ</th>
-                    <th>ВГР, %</th>
+                    <th>Тгр</th>
+                    <th>Тф</th>
+                    <th>Вгр, %</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -511,17 +750,29 @@ function Analytics() {
               </div>
               {groupReport?.dynamics?.length > 0 && (
                 <>
-                  <h4>Динамика ВГР по месяцам</h4>
+                  <h4>Динамика Вгр по месяцам</h4>
                   <div className="chart-box">
                     <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={groupReport.dynamics}>
+                      <LineChart
+                        data={groupReport.dynamics}
+                        onMouseLeave={() => setGroupHoverLineKey(null)}
+                      >
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis />
                         <Tooltip />
                         <Legend />
                         {groupDynamicKeys.map((key, idx) => (
-                          <Line key={key} type="monotone" dataKey={key} stroke={palette[idx % palette.length]} />
+                          <Line
+                            key={key}
+                            type="monotone"
+                            dataKey={key}
+                            stroke={palette[idx % palette.length]}
+                            strokeWidth={groupHoverLineKey === key ? 3.5 : 2}
+                            dot={false}
+                            activeDot={{ r: 5 }}
+                            onMouseEnter={() => setGroupHoverLineKey(key)}
+                          />
                         ))}
                       </LineChart>
                     </ResponsiveContainer>
@@ -593,18 +844,15 @@ function Analytics() {
           <h4>Топ товары</h4>
           {renderPie(orderData.topProducts, 'order-products')}
           <h4>Выручка по месяцам (12м)</h4>
-          {renderTimeSeries(orderData.revenueByMonth)}
+          {renderTimeSeries(orderData.revenueByMonth, 'orders-revenue')}
           <h4>Бестселлеры по месяцам</h4>
-          {renderTimeSeries(orderData.bestsellersByMonth)}
-          <h4>Фильтр по статусу/полу/возрасту/категории/бренду</h4>
+          {renderTimeSeries(orderData.bestsellersByMonth, 'orders-best')}
+          <h4>Расширенный анализ заказов</h4>
+          <p className="analytics-filter-hint">Уточнение по статусу, полу и возрастной группе (категория и бренд уже на диаграммах выше).</p>
           <div className="filters">
             <select
               value={orderFilter.status}
-              onChange={(e) => {
-                const next = { ...orderFilter, status: e.target.value };
-                setOrderFilter(next);
-                loadOrderFilter(next);
-              }}
+              onChange={(e) => setOrderFilter((prev) => ({ ...prev, status: e.target.value }))}
             >
               <option value="">Все статусы</option>
               <option value="PROCESSING">{translateOrderStatus('PROCESSING')}</option>
@@ -614,53 +862,26 @@ function Analytics() {
             </select>
             <select
               value={orderFilter.gender}
-              onChange={(e) => {
-                const next = { ...orderFilter, gender: e.target.value };
-                setOrderFilter(next);
-                loadOrderFilter(next);
-              }}
+              onChange={(e) => setOrderFilter((prev) => ({ ...prev, gender: e.target.value }))}
             >
               <option value="">Пол: любой</option>
               <option value="M">{translateGender('M')}</option>
               <option value="F">{translateGender('F')}</option>
               <option value="N">{translateGender('N')}</option>
             </select>
-            <input
-              placeholder="Возрастной bucket"
+            <select
               value={orderFilter.ageGroup}
-              onChange={(e) => {
-                const next = { ...orderFilter, ageGroup: e.target.value };
-                setOrderFilter(next);
-                loadOrderFilter(next);
-              }}
-            />
-            <input
-              placeholder="Категория ID"
-              value={orderFilter.categoryId}
-              onChange={(e) => {
-                const next = { ...orderFilter, categoryId: e.target.value };
-                setOrderFilter(next);
-                loadOrderFilter(next);
-              }}
-              type="number"
-            />
-            <input
-              placeholder="Бренд ID"
-              value={orderFilter.brandId}
-              onChange={(e) => {
-                const next = { ...orderFilter, brandId: e.target.value };
-                setOrderFilter(next);
-                loadOrderFilter(next);
-              }}
-              type="number"
-            />
+              onChange={(e) => setOrderFilter((prev) => ({ ...prev, ageGroup: e.target.value }))}
+            >
+              {AGE_BUCKET_OPTIONS.map((opt) => (
+                <option key={opt.value || 'any'} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
-              onClick={() => {
-                const next = { status: '', gender: '', ageGroup: '', categoryId: '', brandId: '' };
-                setOrderFilter(next);
-                loadOrderFilter(next);
-              }}
+              onClick={() => setOrderFilter({ status: '', gender: '', ageGroup: '' })}
             >
               Очистить фильтр
             </button>
@@ -675,16 +896,12 @@ function Analytics() {
       )}
 
       {activeTab === 'analyze' && (
-        <Section title="Глубокий анализ (gender/ageGroup/month)">
+        <Section title="Глубокий анализ (товары / категории / бренды)">
           {analyzeError && <div className="error-msg">{analyzeError}</div>}
           <div className="filters">
             <select
               value={analyzeFilters.scope}
-              onChange={(e) => {
-                const next = { ...analyzeFilters, scope: e.target.value };
-                setAnalyzeFilters(next);
-                loadAnalyze(next);
-              }}
+              onChange={(e) => setAnalyzeFilters((prev) => ({ ...prev, scope: e.target.value }))}
             >
               <option value="products">Товары</option>
               <option value="categories">Категории</option>
@@ -692,45 +909,39 @@ function Analytics() {
             </select>
             <select
               value={analyzeFilters.gender}
-              onChange={(e) => {
-                const next = { ...analyzeFilters, gender: e.target.value };
-                setAnalyzeFilters(next);
-                loadAnalyze(next);
-              }}
+              onChange={(e) => setAnalyzeFilters((prev) => ({ ...prev, gender: e.target.value }))}
             >
               <option value="">Пол: любой</option>
               <option value="M">{translateGender('M')}</option>
               <option value="F">{translateGender('F')}</option>
               <option value="N">{translateGender('N')}</option>
             </select>
-            <input
-              placeholder="Возрастной bucket (например 18-24)"
+            <select
               value={analyzeFilters.ageGroup}
-              onChange={(e) => {
-                const next = { ...analyzeFilters, ageGroup: e.target.value };
-                setAnalyzeFilters(next);
-                loadAnalyze(next);
-              }}
-            />
-            <input
-              placeholder="Месяц (1-12)"
+              onChange={(e) => setAnalyzeFilters((prev) => ({ ...prev, ageGroup: e.target.value }))}
+            >
+              {AGE_BUCKET_OPTIONS.map((opt) => (
+                <option key={`a-${opt.value || 'any'}`} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <select
               value={analyzeFilters.month}
-              onChange={(e) => {
-                const next = { ...analyzeFilters, month: e.target.value };
-                setAnalyzeFilters(next);
-                loadAnalyze(next);
-              }}
-              type="number"
-              min="1"
-              max="12"
-            />
+              onChange={(e) => setAnalyzeFilters((prev) => ({ ...prev, month: e.target.value }))}
+            >
+              <option value="">Месяц заказа: любой</option>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={String(m)}>
+                  {m}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
-              onClick={() => {
-                const next = { scope: 'products', gender: '', ageGroup: '', month: '' };
-                setAnalyzeFilters(next);
-                loadAnalyze(next);
-              }}
+              onClick={() =>
+                setAnalyzeFilters({ scope: 'products', gender: '', ageGroup: '', month: '' })
+              }
             >
               Очистить фильтр
             </button>

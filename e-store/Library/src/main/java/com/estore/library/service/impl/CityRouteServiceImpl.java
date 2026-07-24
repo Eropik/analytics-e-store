@@ -23,13 +23,42 @@ import java.util.Optional;
 public class CityRouteServiceImpl implements CityRouteService {
     
     private final CityRouteRepository cityRouteRepository;
-    private final CityService cityService;;
+    private final CityService cityService;
+
+    /**
+     * В БД: {@code CHECK (city_a_id < city_b_id)} — всегда меньший id в cityA, больший в cityB.
+     */
+    private void normalizeRouteEndpoints(CityRoute route) {
+        if (route.getCityA() == null || route.getCityB() == null) {
+            throw new IllegalArgumentException("Укажите оба города маршрута");
+        }
+        Integer idA = route.getCityA().getCityId();
+        Integer idB = route.getCityB().getCityId();
+        if (idA == null || idB == null) {
+            throw new IllegalArgumentException("У каждого города должен быть указан идентификатор");
+        }
+        if (idA.equals(idB)) {
+            throw new IllegalArgumentException("Города начала и конца маршрута должны различаться");
+        }
+        if (idA > idB) {
+            City tmp = route.getCityA();
+            route.setCityA(route.getCityB());
+            route.setCityB(tmp);
+        }
+    }
     
     @Override
     @Transactional
     public CityRoute createRoute(CityRoute route) {
-        if (route.getDistanceKm().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Distance must be greater than zero");
+        normalizeRouteEndpoints(route);
+        if (route.getDistanceKm() == null || route.getDistanceKm().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Расстояние должно быть больше нуля");
+        }
+        boolean duplicate = !cityRouteRepository
+                .findByCityAAndCityB(route.getCityA().getCityId(), route.getCityB().getCityId())
+                .isEmpty();
+        if (duplicate) {
+            throw new IllegalArgumentException("Маршрут между этими городами уже существует");
         }
         return cityRouteRepository.save(route);
     }
@@ -39,7 +68,18 @@ public class CityRouteServiceImpl implements CityRouteService {
     public CityRoute updateRoute(Integer routeId, CityRoute route) {
         CityRoute existingRoute = cityRouteRepository.findById(routeId)
                 .orElseThrow(() -> new IllegalArgumentException("Route not found with id: " + routeId));
-        
+        normalizeRouteEndpoints(route);
+        if (route.getDistanceKm() == null || route.getDistanceKm().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Расстояние должно быть больше нуля");
+        }
+        boolean duplicate = cityRouteRepository
+                .findByCityAAndCityB(route.getCityA().getCityId(), route.getCityB().getCityId())
+                .stream()
+                .anyMatch(cr -> !cr.getRouteId().equals(routeId));
+        if (duplicate) {
+            throw new IllegalArgumentException("Маршрут между этими городами уже существует");
+        }
+
         existingRoute.setCityA(route.getCityA());
         existingRoute.setCityB(route.getCityB());
         existingRoute.setDistanceKm(route.getDistanceKm());

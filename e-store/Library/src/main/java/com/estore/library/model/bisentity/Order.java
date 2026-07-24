@@ -28,7 +28,7 @@ public class Order {
 
     @Id
     @Column(name = "order_id")
-    private UUID id = UUID.randomUUID();  // Генерация UUID по умолчанию
+    private UUID id = UUID.randomUUID();
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
@@ -37,7 +37,7 @@ public class Order {
 
     @Column(name = "order_date")
     @Temporal(TemporalType.TIMESTAMP)
-    private Date orderDate = new Date();  // По умолчанию текущая дата
+    private Date orderDate = new Date();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "status_id", nullable = false)

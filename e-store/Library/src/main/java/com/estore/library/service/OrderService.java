@@ -6,7 +6,6 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,8 +14,6 @@ public interface OrderService {
     Order createOrder(Order order);
 
     Order updateOrder(UUID orderId, Order order);
-
-    void deleteOrder(UUID orderId);
 
     Optional<Order> getOrderById(UUID orderId);
 
@@ -30,14 +27,6 @@ public interface OrderService {
 
     Page<Order> getOrdersByDateRange(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 
-    Page<Order> getOrdersByCity(Integer cityId, Pageable pageable);
-
-    Page<Order> getOrdersByDeliveryMethod(Integer methodId, Pageable pageable);
-
-    Page<Order> getOrdersByPaymentMethod(Integer methodId, Pageable pageable);
-
-    Page<Order> getOrdersByStatuses(List<Integer> statusIds, Pageable pageable);
-
     Long getUserOrderCount(UUID userId);
 
     BigDecimal getUserTotalSpent(UUID userId);
@@ -47,5 +36,4 @@ public interface OrderService {
     // 🚀 НОВЫЙ МЕТОД: для фильтрации по диапазону дат И статусу
     Page<Order> getOrdersByDateRangeAndStatus(LocalDateTime startDate, LocalDateTime endDate, Integer statusId, Pageable pageable);
 
-    BigDecimal calculateOrderTotal(UUID orderId);
 }

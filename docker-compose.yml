@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # 1. База данных PostgreSQL
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: estore-postgres
+    environment:
+      POSTGRES_DB: storchik
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - estore-net
+
+  # 2. Мигратор БД
+  migrator:
+    build:
+      context: ./e-store
+      args:
+        MODULE_NAME: DatabaseMigrator
+    container_name: course_proj-migrator
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/estore_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=root
+    depends_on:
+      - postgres-db
+    networks:
+      - estore-net
+
+  # 3. Бэкенд Админки
+  admin-backend:
+    build:
+      context: ./e-store
+      args:
+        MODULE_NAME: Admin
+    container_name: course_proj-admin
+    ports:
+      - "8019:8019"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/estore_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=root
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - estore-net
+
+  # 4. Бэкенд Клиента
+  customer-backend:
+    build:
+      context: ./e-store
+      args:
+        MODULE_NAME: Customer
+    container_name: course_proj-customer
+    ports:
+      - "8020:8020"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/estore_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=root
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - estore-net
+
+  # 5. Фронтенд Клиента (React)
+  customer-frontend:
+    build:
+      context: ./customer-frontend
+    container_name: course_proj-customer-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - CHOKIDAR_USEPOLLING=true # Полезно для горячей перезагрузки в Windows/Docker
+    depends_on:
+      - customer-backend
+    networks:
+      - estore-net
+
+  # 6. Фронтенд Админки (React)
+  admin-frontend:
+    build:
+      context: ./admin-frontend
+    container_name: course_proj-admin-frontend
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - admin-backend
+    networks:
+      - estore-net
+
+networks:
+  estore-net:
+    driver: bridge
+
+volumes:
+  pgdata:

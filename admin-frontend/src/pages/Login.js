@@ -21,6 +21,11 @@ function Login() {
         localStorage.setItem('adminUserId', data.userId);
         localStorage.setItem('adminEmail', data.email || email);
         localStorage.setItem('adminDepartment', data.department || '');
+        if (data.permissions && typeof data.permissions === 'object') {
+          localStorage.setItem('adminPermissions', JSON.stringify(data.permissions));
+        } else {
+          localStorage.removeItem('adminPermissions');
+        }
       }
       navigate('/analytics');
     } catch (err) {

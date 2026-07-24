@@ -36,6 +36,7 @@ function Register() {
       if (data?.userId) {
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('userEmail', data.email || form.email);
+        window.dispatchEvent(new Event('authChanged'));
       }
       navigate('/');
     } catch (err) {

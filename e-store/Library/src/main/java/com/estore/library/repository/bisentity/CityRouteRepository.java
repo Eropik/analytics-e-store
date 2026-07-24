@@ -72,10 +72,6 @@ public interface CityRouteRepository extends JpaRepository<CityRoute, Integer> {
     @Query("SELECT cr FROM CityRoute cr WHERE cr.distanceKm <= :maxDistance")
     List<CityRoute> findByMaxDistance(@Param("maxDistance") BigDecimal maxDistance);
     
-    @Query("SELECT cr FROM CityRoute cr WHERE cr.cityA.cityName = :cityName OR cr.cityB.cityName = :cityName")
-    List<CityRoute> findByCityName(@Param("cityName") String cityName);
-    
-
     /**
      * BFS поиск маршрута до конкретного города
      */

@@ -119,6 +119,17 @@
   background: #edf5ff;
 }
 
+.analytics-total-row td {
+  font-weight: 700;
+  background: #f4f8ff;
+}
+
+.hint-msg {
+  margin-top: 8px;
+  color: #4d5f7a;
+  font-size: 0.92rem;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -131,6 +142,26 @@
   padding: 6px;
   border: 1px solid #ccc;
   border-radius: 6px;
+}
+
+.filters .autocomplete-select {
+  min-width: 200px;
+  flex: 1 1 220px;
+}
+
+.filters .autocomplete-select__label {
+  color: #475569;
+  font-weight: 500;
+}
+
+.analytics-filter-hint {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.analytics-no-nav-form {
+  margin: 0;
 }
 
 

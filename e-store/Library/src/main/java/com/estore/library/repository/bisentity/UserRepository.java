@@ -34,9 +34,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             Pageable pageable
     );
     
-    @Query("SELECT u FROM User u WHERE u.lastLogin >= :date")
-    Page<User> findByLastLoginAfter(@Param("date") LocalDateTime date, Pageable pageable);
-    
     @Query("SELECT u FROM User u WHERE LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))")
     Page<User> searchByEmail(@Param("search") String search, Pageable pageable);
 }

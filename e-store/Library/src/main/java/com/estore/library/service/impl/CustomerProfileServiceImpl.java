@@ -47,7 +47,8 @@ public class CustomerProfileServiceImpl implements CustomerProfileService {
         existingProfile.setCity(profile.getCity());
         existingProfile.setDateOfBirth(profile.getDateOfBirth());
         existingProfile.setProfilePictureUrl(profile.getProfilePictureUrl());
-        
+        existingProfile.setGender(profile.getGender());
+
         return customerProfileRepository.save(existingProfile);
     }
     

@@ -15,8 +15,6 @@ public interface BrandService {
     
     Optional<Brand> getBrandById(Integer brandId);
     
-    Optional<Brand> getBrandByName(String brandName);
-    
     List<Brand> getAllBrands();
     
     List<Brand> searchBrands(String search);

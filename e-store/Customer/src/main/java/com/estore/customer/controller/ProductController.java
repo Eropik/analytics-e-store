@@ -1,5 +1,7 @@
 package com.estore.customer.controller;
 
+import com.estore.library.dto.product.response.ProductResponseDto;
+import com.estore.library.mapper.ProductMapper;
 import com.estore.library.model.bisentity.Product;
 import com.estore.library.service.ProductService;
 import com.estore.library.service.CategoryService;
@@ -25,6 +27,7 @@ public class ProductController {
     private final ProductService productService;
     private final CategoryService categoryService;
     private final BrandService brandService;
+    private final ProductMapper productMapper;
     
     /**
      * Получить список товаров с пагинацией
@@ -41,12 +44,18 @@ public class ProductController {
             Sort sort = sortDir.equalsIgnoreCase("asc") 
                 ? Sort.by(sortBy).ascending() 
                 : Sort.by(sortBy).descending();
-            
-            Pageable pageable = PageRequest.of(page, size, sort);
-            Page<Product> productsPage = productService.getAvailableProducts(pageable);
-            
+
+
+
+
+            Pageable pageable = PageRequest.of(page, size, sort);Page<Product> productsPage = productService.getAvailableProducts(pageable);
+
+            List<ProductResponseDto> productDtos = productsPage.getContent().stream()
+                    .map(productMapper::toResponseDto)
+                    .toList();
+
             Map<String, Object> response = new HashMap<>();
-            response.put("products", productsPage.getContent());
+            response.put("products", productDtos);
             response.put("currentPage", productsPage.getNumber());
             response.put("totalItems", productsPage.getTotalElements());
             response.put("totalPages", productsPage.getTotalPages());
@@ -67,14 +76,17 @@ public class ProductController {
     public ResponseEntity<?> getProductById(@PathVariable UUID id) {
         try {
             Optional<Product> productOpt = productService.getProductById(id);
-            
+
+            // Сначала проверяем, есть ли товар
             if (productOpt.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "Product not found"));
             }
-            
-            return ResponseEntity.ok(productOpt.get());
-            
+
+            // Мапим единственный найденный товар и сразу отдаем
+            ProductResponseDto dto = productMapper.toResponseDto(productOpt.get());
+            return ResponseEntity.ok(dto);
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
@@ -92,11 +104,18 @@ public class ProductController {
             @RequestParam(defaultValue = "20") int size) {
         
         try {
+
+
             Pageable pageable = PageRequest.of(page, size);
+
             Page<Product> productsPage = productService.searchProducts(query, pageable);
-            
+
+            List<ProductResponseDto> productDtos = productsPage.getContent().stream()
+                    .map(productMapper::toResponseDto)
+                    .toList();
+
             Map<String, Object> response = new HashMap<>();
-            response.put("products", productsPage.getContent());
+            response.put("products", productDtos);
             response.put("currentPage", productsPage.getNumber());
             response.put("totalItems", productsPage.getTotalElements());
             response.put("totalPages", productsPage.getTotalPages());
@@ -122,9 +141,14 @@ public class ProductController {
         try {
             Pageable pageable = PageRequest.of(page, size);
             Page<Product> productsPage = productService.getProductsByCategory(categoryId, pageable);
-            
+
+            List<ProductResponseDto> productDtos = productsPage.getContent().stream()
+                    .map(productMapper::toResponseDto)
+                    .toList();
+
             Map<String, Object> response = new HashMap<>();
-            response.put("products", productsPage.getContent());
+            response.put("products", productDtos);
+
             response.put("currentPage", productsPage.getNumber());
             response.put("totalItems", productsPage.getTotalElements());
             response.put("totalPages", productsPage.getTotalPages());
@@ -150,9 +174,13 @@ public class ProductController {
         try {
             Pageable pageable = PageRequest.of(page, size);
             Page<Product> productsPage = productService.getProductsByBrand(brandId, pageable);
-            
+            List<ProductResponseDto> productDtos = productsPage.getContent().stream()
+                    .map(productMapper::toResponseDto)
+                    .toList();
+
             Map<String, Object> response = new HashMap<>();
-            response.put("products", productsPage.getContent());
+            response.put("products", productDtos);
+
             response.put("currentPage", productsPage.getNumber());
             response.put("totalItems", productsPage.getTotalElements());
             response.put("totalPages", productsPage.getTotalPages());
@@ -179,9 +207,14 @@ public class ProductController {
         try {
             Pageable pageable = PageRequest.of(page, size);
             Page<Product> productsPage = productService.getProductsByPriceRange(min, max, pageable);
-            
+
+            List<ProductResponseDto> productDtos = productsPage.getContent().stream()
+                    .map(productMapper::toResponseDto)
+                    .toList();
+
             Map<String, Object> response = new HashMap<>();
-            response.put("products", productsPage.getContent());
+            response.put("products", productDtos);
+
             response.put("currentPage", productsPage.getNumber());
             response.put("totalItems", productsPage.getTotalElements());
             response.put("totalPages", productsPage.getTotalPages());
@@ -210,9 +243,12 @@ public class ProductController {
         try {
             Pageable pageable = PageRequest.of(page, size);
             Page<Product> productsPage = productService.getTopRatedProducts(pageable);
-            
+            List<ProductResponseDto> productDtos = productsPage.getContent().stream()
+                    .map(productMapper::toResponseDto)
+                    .toList();
+
             Map<String, Object> response = new HashMap<>();
-            response.put("products", productsPage.getContent());
+            response.put("products", productDtos);
             response.put("currentPage", productsPage.getNumber());
             response.put("totalItems", productsPage.getTotalElements());
             response.put("totalPages", productsPage.getTotalPages());
@@ -237,9 +273,12 @@ public class ProductController {
         try {
             Pageable pageable = PageRequest.of(page, size);
             Page<Product> productsPage = productService.getNewestProducts(pageable);
-            
+            List<ProductResponseDto> productDtos = productsPage.getContent().stream()
+                    .map(productMapper::toResponseDto)
+                    .toList();
+
             Map<String, Object> response = new HashMap<>();
-            response.put("products", productsPage.getContent());
+            response.put("products", productDtos);
             response.put("currentPage", productsPage.getNumber());
             response.put("totalItems", productsPage.getTotalElements());
             response.put("totalPages", productsPage.getTotalPages());

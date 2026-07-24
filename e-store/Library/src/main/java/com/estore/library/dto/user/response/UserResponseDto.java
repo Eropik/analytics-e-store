@@ -1,6 +1,5 @@
 package com.estore.library.dto.user.response;
 
-import com.estore.library.model.bisentity.AdminProfile;
 import lombok.Data;
 import java.util.UUID;
 

@@ -12,4 +12,6 @@ public class TurnoverPlanRowDto {
     private BigDecimal planExecutionPercent;
     private BigDecimal sigma;
     private BigDecimal variationPercent;
+    private BigDecimal cumulativeSigma;
+    private BigDecimal cumulativeVariationPercent;
 }

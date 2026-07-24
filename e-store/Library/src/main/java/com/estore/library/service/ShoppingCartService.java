@@ -8,15 +8,9 @@ import java.util.UUID;
 
 public interface ShoppingCartService {
     
-    ShoppingCart createCart(UUID userId);
-    
-    Optional<ShoppingCart> getCartById(UUID cartId);
-    
     Optional<ShoppingCart> getCartByUserId(UUID userId);
     
     Optional<ShoppingCart> getCartWithItems(UUID userId);
-    
-    void deleteCart(UUID cartId);
     
     void clearCart(UUID cartId);
     
@@ -30,5 +24,4 @@ public interface ShoppingCartService {
     
     void removeProductFromCart(UUID userId, UUID productId);
     
-    ShoppingCart getOrCreateCart(UUID userId);
 }

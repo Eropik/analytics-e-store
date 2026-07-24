@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { orderService } from '../services/api';
 import './OrderHistory.css';
+import { translateOrderStatus } from '../utils/enumTranslations';
+import { formatOrderDateTime } from '../utils/formatOrderDate';
 
 function OrderHistory() {
   const [orders, setOrders] = useState([]);
@@ -37,9 +39,9 @@ function OrderHistory() {
           {orders.map(order => (
             <div key={order.id} className="order-card">
               <h3>Заказ #{order.id}</h3>
-              <p><strong>Дата:</strong> {new Date(order.orderDate).toLocaleDateString()}</p>
-              <p><strong>Статус:</strong> {order.statusName}</p>
-              <p><strong>Сумма:</strong> {order.totalAmount} ₽</p>
+              <p><strong>Дата:</strong> {formatOrderDateTime(order.orderDate || order.createdAt)}</p>
+              <p><strong>Статус:</strong> {translateOrderStatus(order.statusName)}</p>
+              <p><strong>Сумма:</strong> {order.totalAmount} р.</p>
               <p><strong>Адрес доставки:</strong> {order.deliveryInfo?.shippingAddressText || 'Не указан'}</p>
             </div>
           ))}

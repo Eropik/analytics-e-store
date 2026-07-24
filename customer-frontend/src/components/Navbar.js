@@ -4,15 +4,25 @@ import { profileService } from '../services/api';
 import './Navbar.css';
 
 function Navbar() {
-  const userId = localStorage.getItem('userId');
-  const userEmail = localStorage.getItem('userEmail') || '';
+  const [authState, setAuthState] = useState({
+    userId: localStorage.getItem('userId'),
+    userEmail: localStorage.getItem('userEmail') || '',
+  });
   const [avatarUrl, setAvatarUrl] = useState(localStorage.getItem('profileAvatar') || '');
 
   useEffect(() => {
+    const syncAuth = () => {
+      setAuthState({
+        userId: localStorage.getItem('userId'),
+        userEmail: localStorage.getItem('userEmail') || '',
+      });
+      setAvatarUrl(localStorage.getItem('profileAvatar') || '');
+    };
+
     const loadProfile = async () => {
-      if (!userId) return;
+      if (!authState.userId) return;
       try {
-        const res = await profileService.get(userId);
+        const res = await profileService.get(authState.userId);
         if (res.data?.profilePictureUrl) {
           setAvatarUrl(res.data.profilePictureUrl);
           localStorage.setItem('profileAvatar', res.data.profilePictureUrl);
@@ -23,16 +33,17 @@ function Navbar() {
     };
     loadProfile();
     const handler = () => {
-      const url = localStorage.getItem('profileAvatar') || '';
-      setAvatarUrl(url);
+      syncAuth();
     };
     window.addEventListener('storage', handler);
     window.addEventListener('profileAvatarUpdated', handler);
+    window.addEventListener('authChanged', handler);
     return () => {
       window.removeEventListener('storage', handler);
       window.removeEventListener('profileAvatarUpdated', handler);
+      window.removeEventListener('authChanged', handler);
     };
-  }, [userId]);
+  }, [authState.userId]);
 
   return (
     <nav className="navbar">
@@ -40,7 +51,7 @@ function Navbar() {
       <div className="navbar-links">
         <Link to="/">Каталог</Link>
         <Link to="/cart">Корзина</Link>
-        {userId && (
+        {authState.userId && (
           <>
             <Link to="/profile" className="profile-chip">
               {avatarUrl ? (
@@ -55,13 +66,13 @@ function Navbar() {
                   }}
                 />
               ) : (
-                <span className="avatar-circle">{userEmail.charAt(0).toUpperCase() || 'U'}</span>
+                <span className="avatar-circle">{authState.userEmail.charAt(0).toUpperCase() || 'U'}</span>
               )}
-              <span className="email">{userEmail}</span>
+              <span className="email">{authState.userEmail}</span>
             </Link>
           </>
         )}
-        {!userId && (
+        {!authState.userId && (
           <>
             <Link to="/login">Вход</Link>
             <Link to="/register">Регистрация</Link>

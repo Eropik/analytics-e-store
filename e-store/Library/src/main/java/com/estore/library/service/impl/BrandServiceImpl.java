@@ -56,11 +56,6 @@ public class BrandServiceImpl implements BrandService {
     }
     
     @Override
-    public Optional<Brand> getBrandByName(String brandName) {
-        return brandRepository.findByBrandName(brandName);
-    }
-    
-    @Override
     public List<Brand> getAllBrands() {
         return brandRepository.findAllOrderByBrandNameAsc();
     }

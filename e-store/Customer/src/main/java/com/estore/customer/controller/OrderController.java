@@ -4,6 +4,7 @@ import com.estore.library.model.bisentity.Order;
 import com.estore.library.model.bisentity.OrderItem;
 import com.estore.library.model.bisentity.Product;
 import com.estore.library.model.bisentity.User;
+import com.estore.library.model.bisentity.Warehouse;
 import com.estore.library.model.dicts.*;
 import com.estore.library.service.*;
 import com.estore.library.repository.dicts.OrderStatusRepository;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 @RestController
@@ -59,21 +61,31 @@ public class OrderController {
             order.setShippingAddressText(request.getShippingAddressText());
             order.setDeliveryMethod(deliveryMethod);
             order.setPaymentMethod(paymentMethod);
-            order.setDiscountApplied(request.getDiscountApplied());
+            order.setDiscountApplied(0.0);
             order.setOrderItems(new ArrayList<>());
+
+            Map<UUID, Integer> requestedByProduct = new HashMap<>();
 
             if (request.getItems() != null) {
                 for (CreateOrderItem itemReq : request.getItems()) {
                     Product product = productService.getProductById(itemReq.getProductId())
                             .orElseThrow(() -> new IllegalArgumentException("Product not found: " + itemReq.getProductId()));
+                    int requested = itemReq.getQuantity() != null ? itemReq.getQuantity() : 0;
+                    if (requested <= 0) {
+                        throw new IllegalArgumentException("Количество товара должно быть больше 0");
+                    }
                     int available = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
-                    int newStock = available - itemReq.getQuantity();
-                    if (newStock < 0) newStock = 0; // не даём уйти в минус, но заказ оформляем
+                    int accumulated = requestedByProduct.getOrDefault(product.getProductId(), 0) + requested;
+                    requestedByProduct.put(product.getProductId(), accumulated);
+                    if (accumulated > available) {
+                        throw new IllegalStateException("Недостаточно товара на складе: " + product.getName() + " (доступно " + available + ")");
+                    }
+                    int newStock = available - requested;
 
                     OrderItem item = new OrderItem();
                     item.setOrder(order);
                     item.setProduct(product);
-                    item.setQuantity(itemReq.getQuantity());
+                    item.setQuantity(requested);
                     item.setUnitPrice(product.getPrice());
                     order.getOrderItems().add(item);
 
@@ -81,6 +93,17 @@ public class OrderController {
                     product.setStockQuantity(newStock);
                     productService.updateProduct(product.getProductId(), product);
                 }
+            }
+
+            try {
+                Map<String, Object> nearest = warehouseService.findOptimalWarehouseForDelivery(city.getCityId());
+                Object whIdObj = nearest.get("warehouseId");
+                if (whIdObj instanceof Number) {
+                    Long whId = ((Number) whIdObj).longValue();
+                    warehouseService.getWarehouseById(whId).ifPresent(order::setSourceWarehouse);
+                }
+            } catch (Exception ignored) {
+                // nearest warehouse may be unknown at order creation stage
             }
             
             Order createdOrder = orderService.createOrder(order);
@@ -91,9 +114,13 @@ public class OrderController {
             response.put("orderId", createdOrder.getId());
             response.put("totalAmount", createdOrder.getTotalAmount());
             response.put("status", createdOrder.getStatus());
+            response.put("pricing", buildPricingBreakdown(createdOrder, order.getOrderItems()));
             
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
             
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
@@ -173,7 +200,7 @@ public class OrderController {
             Page<Order> ordersPage = orderService.getOrdersByUserId(userId, pageable);
             
             Map<String, Object> response = new HashMap<>();
-            response.put("orders", ordersPage.getContent());
+            response.put("orders", ordersPage.getContent().stream().map(this::toOrderSummary).toList());
             response.put("currentPage", ordersPage.getNumber());
             response.put("totalItems", ordersPage.getTotalElements());
             response.put("totalPages", ordersPage.getTotalPages());
@@ -204,8 +231,9 @@ public class OrderController {
             List<OrderItem> items = orderItemService.getOrderItemsByOrderId(orderId);
             
             Map<String, Object> response = new HashMap<>();
-            response.put("order", order);
+            response.put("order", toOrderDetails(order));
             response.put("items", items);
+            response.put("pricing", buildPricingBreakdown(order, items));
             
             return ResponseEntity.ok(response);
             
@@ -296,6 +324,107 @@ public class OrderController {
         public void setDiscountApplied(Double discountApplied) { this.discountApplied = discountApplied; }
         public List<CreateOrderItem> getItems() { return items; }
         public void setItems(List<CreateOrderItem> items) { this.items = items; }
+    }
+
+    private Map<String, Object> toOrderSummary(Order order) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("orderId", order.getId());
+        dto.put("orderDate", order.getOrderDate());
+        dto.put("statusName", order.getStatus() != null ? order.getStatus().getStatusName() : null);
+        dto.put("totalAmount", order.getTotalAmount());
+        dto.put("shippingAddressText", order.getShippingAddressText());
+        if (order.getShippingCity() != null) {
+            dto.put("shippingCityName", order.getShippingCity().getCityName());
+        }
+        return dto;
+    }
+
+    private Map<String, Object> toOrderDetails(Order order) {
+        Map<String, Object> dto = new HashMap<>(toOrderSummary(order));
+        dto.put("discountApplied", order.getDiscountApplied());
+        dto.put("actualDeliveryDate", order.getActualDeliveryDate());
+        if (order.getDeliveryMethod() != null) {
+            Map<String, Object> delivery = new HashMap<>();
+            delivery.put("methodId", order.getDeliveryMethod().getMethodId());
+            delivery.put("methodName", order.getDeliveryMethod().getMethodName());
+            delivery.put("description", order.getDeliveryMethod().getDescription());
+            dto.put("deliveryMethod", delivery);
+        }
+        if (order.getPaymentMethod() != null) {
+            Map<String, Object> payment = new HashMap<>();
+            payment.put("methodId", order.getPaymentMethod().getMethodId());
+            payment.put("methodName", order.getPaymentMethod().getMethodName());
+            payment.put("description", order.getPaymentMethod().getDescription());
+            dto.put("paymentMethod", payment);
+        }
+        if (order.getSourceWarehouse() != null) {
+            Warehouse w = order.getSourceWarehouse();
+            Map<String, Object> wh = new HashMap<>();
+            wh.put("warehouseId", w.getId());
+            wh.put("warehouseName", w.getName());
+            wh.put("address", w.getAddress());
+            if (w.getCity() != null) {
+                wh.put("cityId", w.getCity().getCityId());
+                wh.put("cityName", w.getCity().getCityName());
+            }
+            dto.put("sourceWarehouse", wh);
+            dto.put("distanceKm", resolveDistanceKm(order));
+        }
+        return dto;
+    }
+
+    private Map<String, Object> buildPricingBreakdown(Order order, List<OrderItem> items) {
+        BigDecimal baseTotal = (items == null ? List.<OrderItem>of() : items).stream()
+                .map(it -> it.getUnitPrice().multiply(BigDecimal.valueOf(it.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        int itemsCount = (items == null ? List.<OrderItem>of() : items).stream()
+                .mapToInt(it -> it.getQuantity() == null ? 0 : it.getQuantity())
+                .sum();
+
+        int discountPercent = itemsCount >= 10 ? 10 : (itemsCount > 5 ? 8 : 0);
+        BigDecimal discountValue = baseTotal.multiply(BigDecimal.valueOf(discountPercent))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        BigDecimal afterDiscount = baseTotal.subtract(discountValue);
+
+        long roundedDistance = Math.round(resolveDistanceKm(order));
+        String methodName = order.getDeliveryMethod() != null ? order.getDeliveryMethod().getMethodName() : "";
+        boolean selfPickup = methodName != null && methodName.toLowerCase().contains("pickup");
+        int deliveryPercent = selfPickup ? 0 : (roundedDistance <= 150 ? 5 : 8);
+        BigDecimal deliveryExtra = afterDiscount.multiply(BigDecimal.valueOf(deliveryPercent))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        BigDecimal expectedTotal = afterDiscount.add(deliveryExtra);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("itemsCount", itemsCount);
+        result.put("baseTotal", baseTotal);
+        result.put("discountPercent", discountPercent);
+        result.put("discountValue", discountValue);
+        result.put("afterDiscountTotal", afterDiscount);
+        result.put("deliveryDistanceKm", roundedDistance);
+        result.put("deliveryPercent", deliveryPercent);
+        result.put("deliveryExtraValue", deliveryExtra);
+        result.put("expectedTotal", expectedTotal);
+        result.put("finalTotal", order.getTotalAmount());
+        return result;
+    }
+
+    private double resolveDistanceKm(Order order) {
+        if (order == null || order.getSourceWarehouse() == null || order.getShippingCity() == null
+                || order.getSourceWarehouse().getCity() == null) {
+            return 0.0;
+        }
+        Integer fromCityId = order.getSourceWarehouse().getCity().getCityId();
+        Integer toCityId = order.getShippingCity().getCityId();
+        if (fromCityId == null || toCityId == null) return 0.0;
+        if (fromCityId.equals(toCityId)) return 0.0;
+        try {
+            var route = cityRouteService.findShortestRouteBFSById(fromCityId, toCityId);
+            if (route != null && route.getTotalDistance() != null) {
+                return route.getTotalDistance().doubleValue();
+            }
+        } catch (Exception ignored) {
+        }
+        return 0.0;
     }
 
     public static class CreateOrderItem {

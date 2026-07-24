@@ -27,6 +27,30 @@
   color: #2c4a6b !important;
 }
 
+.tabs {
+  display: flex;        /* Выстраивает элементы в ряд */
+  flex-direction: row;  /* Явно указываем горизонтальное направление */
+  gap: 10px;            /* Расстояние между кнопками */
+  margin-bottom: 20px;  /* Отступ снизу до контента */
+  flex-wrap: wrap;      /* Если экран маленький, табы аккуратно перенесутся на новую строку */
+}
+
+/* При желании можно немного стилизовать сами кнопки табов */
+.tabs button {
+  padding: 10px 20px;
+  border: 1px solid #ccc;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tabs button.active {
+  background-color: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+
 .form-row {
   display: flex;
   gap: 8px;
@@ -127,3 +151,96 @@
   margin-bottom: 20px;
 }
 
+.city-soft-loading {
+  display: inline-block;
+  padding: 6px 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: rgba(15, 30, 50, 0.55);
+  color: #bfe9ff;
+  font-size: 0.92rem;
+}
+
+.routes-autocomplete-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.distance-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.distance-field input {
+  padding: 8px;
+  border: 1px solid #cfd4dc;
+  border-radius: 6px;
+}
+
+.form-block .autocomplete-select__label {
+  color: #374151;
+}
+
+.city-list-filters {
+  margin-bottom: 12px;
+}
+
+.city-list-filters__title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: #2c4a6b !important;
+}
+
+.city-list-filters__hint {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.city-list-filters__meta {
+  margin: 10px 0 0;
+  font-size: 0.86rem;
+  color: #475569;
+}
+
+.city-warehouse-search-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.city-warehouse-search-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.city-warehouse-search-label input {
+  padding: 8px 10px;
+  border: 1px solid #cfd4dc;
+  border-radius: 8px;
+}
+
+.city-filter-reset {
+  padding: 8px 14px;
+  height: fit-content;
+  background: rgba(100, 116, 139, 0.12);
+  color: #334155;
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.city-filter-reset:hover {
+  background: rgba(100, 116, 139, 0.2);
+}

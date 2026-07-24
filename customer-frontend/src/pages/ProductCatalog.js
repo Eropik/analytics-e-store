@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { productService } from '../services/api';
 import './ProductCatalog.css';
 
@@ -12,9 +12,11 @@ function ProductCatalog() {
   const [brandId, setBrandId] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
-  const [maxPriceLimit, setMaxPriceLimit] = useState(50000);
+  const [maxPriceLimit] = useState(50000);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const navigate = useNavigate();
 
   const loadProducts = useCallback(async () => {
     setLoading(true);
@@ -27,7 +29,7 @@ function ProductCatalog() {
           minPrice || 0,
           maxPrice || maxPriceLimit,
           page,
-          20
+          5
         );
       } else if (categoryId) {
         response = await productService.byCategory(categoryId, page, 20);
@@ -41,16 +43,22 @@ function ProductCatalog() {
 
       const list = response.data?.products || response.data?.content || response.data || [];
       setProducts(Array.isArray(list) ? list : []);
+      setTotalPages(Number(response.data?.totalPages || 0));
     } catch (error) {
       console.error('Error loading products:', error);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
-  }, [page, searchQuery, categoryId, brandId, minPrice, maxPrice]);
+  }, [page, searchQuery, categoryId, brandId, minPrice, maxPrice, maxPriceLimit]);
 
   useEffect(() => {
     loadProducts();
   }, [page, searchQuery, loadProducts]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchQuery, categoryId, brandId, minPrice, maxPrice]);
 
   useEffect(() => {
     const fetchDicts = async () => {
@@ -160,20 +168,32 @@ function ProductCatalog() {
       {loading ? (
         <div className="loading-text">Загрузка...</div>
       ) : (
-        <div className="products-grid">
-          {products.map(product => (
-            <Link
-              key={product.productId}
-              to={`/products/${product.productId}`}
-              className={`product-card ${product.stockQuantity === 0 ? 'out-of-stock' : ''}`}
-            >
-              <img src={product.mainImageUrl || '/placeholder.png'} alt={product.name} />
-              <h3>{product.name}</h3>
-              <p className="price">{product.price} ₽</p>
-              <p className="stock">В наличии: {product.stockQuantity}</p>
-            </Link>
-          ))}
-        </div>
+        products.length === 0 ? (
+          <div className="empty-products">
+            <p>Товары не найдены.</p>
+            <button type="button" onClick={() => navigate('/')}>Перейти в каталог товаров</button>
+          </div>
+        ) : (
+          <div className="products-grid">
+            {products.map(product => (
+              <Link
+                key={product.productId}
+                to={`/products/${product.productId}`}
+                className={`product-card ${product.stockQuantity === 0 ? 'out-of-stock' : ''}`}
+              >
+                <img 
+                  src={
+                  product.mainImageUrl || (product.images && product.images.length > 0 ? product.images[0].imageUrl : '/placeholder.png')
+                  } 
+                    alt={product.name} 
+                  />
+                <h3>{product.name}</h3>
+                <p className="price">{product.price} р.</p>
+                <p className="stock">В наличии: {product.stockQuantity}</p>
+              </Link>
+            ))}
+          </div>
+        )
       )}
 
       <div className="pagination">
@@ -181,7 +201,7 @@ function ProductCatalog() {
           Назад
         </button>
         <span>Страница {page + 1}</span>
-        <button onClick={() => setPage(p => p + 1)}>
+        <button onClick={() => setPage(p => p + 1)} disabled={totalPages > 0 && page + 1 >= totalPages}>
           Вперед
         </button>
       </div>

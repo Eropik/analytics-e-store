@@ -67,9 +67,16 @@ public class ShoppingCartController {
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "Product added to cart"
+                "message", "Товар успешно добавлен в корзину"
             ));
             
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            String message = e.getMessage();
+            if (message != null && message.contains("Insufficient stock")) {
+                message = "Выбрано количество больше, чем есть на складе";
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", message));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
